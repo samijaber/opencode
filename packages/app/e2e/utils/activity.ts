@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test"
-import type { SessionStatus, ShellInfo } from "@opencode/client/promise"
+import type { SessionMessageInfo, SessionStatus, ShellInfo } from "@opencode/client/promise"
 import { directory, session, sessionID, setupTimeline } from "./timeline"
 
 export async function setupActivity(page: Page, attention = false) {
@@ -80,6 +80,81 @@ export async function setupActivity(page: Page, attention = false) {
       commands[0].status = "exited"
       commands[0].exit = 0
       commands[0].time.completed = Date.now()
+    },
+  }
+}
+
+export async function setupRecordedActivity(page: Page) {
+  const messages: SessionMessageInfo[] = [
+    { id: "msg_recorded_user", type: "user", text: "Start background checks", time: { created: 1 } },
+    {
+      id: "msg_recorded_tools",
+      type: "assistant",
+      agent: "build",
+      model: { id: "model", providerID: "provider" },
+      time: { created: 2, completed: 3 },
+      content: ["missing", "finished", "live"].map((name) => ({
+        type: "tool",
+        id: `call_recorded_${name}`,
+        name: "shell",
+        time: { created: 2, ran: 2, completed: 3 },
+        state: {
+          status: "completed",
+          input: { command: `pnpm check:${name}`, background: true },
+          metadata: { shellID: `sh_recorded_${name}`, status: "running" },
+          content: [{ type: "text", text: `Started ${name} background check` }],
+        },
+      })),
+    },
+    ...Array.from(
+      { length: 110 },
+      (_, index): SessionMessageInfo => ({
+        id: `msg_recorded_filler_${index}`,
+        type: "user",
+        text: `Follow-up ${index}`,
+        time: { created: index + 4 },
+      }),
+    ),
+    {
+      id: "msg_recorded_finished",
+      type: "synthetic",
+      text: "Finished background check",
+      metadata: { source: "shell", jobID: "call_recorded_finished", state: "completed", exit: 0 },
+      time: { created: 200 },
+    },
+  ]
+  const fixture = await setupTimeline(page, {
+    viewport: { width: 390, height: 844 },
+    sessionMessages: messages,
+    sessionStatus: { [sessionID]: { type: "idle" } },
+    pageMessages: (_id, limit, before) => {
+      const end = before ? messages.findIndex((message) => message.id === before) : messages.length
+      const start = Math.max(0, end - limit)
+      return { items: messages.slice(start, end), cursor: start > 0 ? messages[start].id : undefined }
+    },
+    shellCommands: [
+      {
+        id: "sh_recorded_live",
+        command: "pnpm check:live",
+        cwd: directory,
+        shell: "zsh",
+        file: "/fixture/output",
+        status: "running",
+        metadata: { sessionID },
+        time: { started: 2 },
+      },
+    ],
+  })
+  return {
+    ...fixture,
+    finish() {
+      messages.push({
+        id: "msg_recorded_missing_finished",
+        type: "synthetic",
+        text: "Delayed completion arrived",
+        metadata: { source: "shell", shellID: "sh_recorded_missing", state: "completed", exit: 1 },
+        time: { created: 300 },
+      })
     },
   }
 }

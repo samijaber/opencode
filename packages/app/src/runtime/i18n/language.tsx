@@ -338,8 +338,11 @@ export const { use: useLanguage, provider: LanguageProvider } = createSimpleCont
                 ? plural("session.activity.running", running)
                 : t("session.activity.empty")
         if (!unknown) return summary
-        if (!running && !attention) return plural("session.activity.unknown", unknown)
-        return t("session.activity.summaryUnknown", { summary, unknown: plural("session.activity.unknown", unknown) })
+        if (!running && !attention) return plural("session.activity.unconfirmed", unknown)
+        return t("session.activity.summaryUnknown", {
+          summary,
+          unknown: plural("session.activity.unconfirmed", unknown),
+        })
       },
       pluralForm,
       rich,

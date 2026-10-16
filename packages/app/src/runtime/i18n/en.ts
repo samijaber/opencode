@@ -15,6 +15,11 @@ export const dict = {
   "session.activity.attention.other": "{{count}} need attention",
   "session.activity.unknown.one": "{{count}} unknown",
   "session.activity.unknown.other": "{{count}} unknown",
+  "session.activity.unconfirmed.one": "{{count}} unconfirmed background task",
+  "session.activity.unconfirmed.other": "{{count}} unconfirmed background tasks",
+  "session.activity.unconfirmedDescription":
+    "Live status is unavailable for these tasks. Open the original call or session for context.",
+  "session.activity.openConversation": "Open original call",
   "session.activity.summary": "{{running}} · {{attention}}",
   "session.activity.summaryUnknown": "{{summary}} · {{unknown}}",
   "session.activity.group.attention": "Needs attention",

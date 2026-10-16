@@ -5,6 +5,8 @@ import { useLanguage } from "@/runtime/i18n/language"
 import { useData } from "@/runtime/server/current"
 import { useServerSDK } from "@/runtime/server/client"
 import { MobilePanelDrawer } from "@/shell/mobile-panel-drawer"
+import { showToast } from "@/shell/notifications/toast"
+import { errorMessage } from "@/shell/layout/helpers"
 import { useOpenSessionRoute } from "../session-identity-header"
 import { sessionTreeIDs } from "../requests/session-request-tree"
 import { sessionActivity, type ActivityItem } from "./model"
@@ -64,7 +66,7 @@ export function SessionActivityPanel(props: { sessionID: string }) {
     setState({ ready: false, failed: false })
     if (!connected() || !history.ready()) return
     // Family reads are cached and paginated by the shared data layer. Newly found children extend this effect
-    // until the whole tree is loaded; no transcript pages or command output are needed to show the count.
+    // until the whole tree is loaded. Shell history reconciliation runs independently of timeline hydration.
     const current = ids()
     const directories = [
       ...new Set(
@@ -244,6 +246,9 @@ export function SessionActivityPanel(props: { sessionID: string }) {
                             <span>{language.t(`session.activity.group.${group}`)}</span>
                             <span class="session-activity-count">{activity()[group].length}</span>
                           </h3>
+                          <Show when={group === "unknown"}>
+                            <p>{language.t("session.activity.unconfirmedDescription")}</p>
+                          </Show>
                           {rows(activity()[group])}
                         </section>
                       </Show>
@@ -296,6 +301,32 @@ export function SessionActivityPanel(props: { sessionID: string }) {
                   </Show>
                   <Show when={state.outputFailed}>
                     <p role="alert">{language.t("session.activity.outputFailed")}</p>
+                    <button
+                      type="button"
+                      class="session-activity-action"
+                      disabled={state.loading || !connected()}
+                      onClick={() => {
+                        const target = item()
+                        setState("loading", true)
+                        // Reveal only searches hydrated rows. Load older messages on demand before opening the call.
+                        void data.session.message
+                          .sync(target.sessionID)
+                          .then(() => data.session.message.loadMore(target.sessionID, { all: true }))
+                          .then(() => {
+                            setState("open", false)
+                            openRoute(props.sessionID, target.sessionID, target.id)
+                          })
+                          .catch((error) =>
+                            showToast({
+                              title: language.t("common.requestFailed"),
+                              description: errorMessage(error, language.t("common.requestFailed")),
+                            }),
+                          )
+                          .finally(() => setState("loading", false))
+                      }}
+                    >
+                      {language.t("session.activity.openConversation")}
+                    </button>
                   </Show>
                   <Show when={!state.loading && !state.outputFailed && !state.text}>
                     <p>{language.t("session.activity.noOutput")}</p>

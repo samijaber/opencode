@@ -493,6 +493,8 @@ export function createTimelineVirtualizer(input: Input) {
   createEffect(() => {
     if (!active()) return
     const root = listRoot()
+    // Read route state in the tracked scope so revealing another call in the current session also runs.
+    const target = input.reveal?.target()
 
     if (root) input.setScrollRef(root)
 
@@ -504,8 +506,6 @@ export function createTimelineVirtualizer(input: Input) {
       reportRect?.({ width: root.offsetWidth, height: root.offsetHeight })
 
       // A route can open this timeline on a tool call, e.g. a shell picked from inside a subagent, instead of its end.
-      const target = input.reveal?.target()
-
       if (target && revealPart(target)) input.reveal?.done()
       else if (input.pinned()) virtualizer.scrollToEnd()
 

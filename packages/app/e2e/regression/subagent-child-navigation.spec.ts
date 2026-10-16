@@ -6,7 +6,7 @@ import { currentSession } from "../utils/mock-server"
 import { assistantMessage, session, sessionID, setupTimeline, textPart, userMessage } from "../utils/timeline"
 import { expectSessionTitle } from "../utils/waits"
 import { mockWorkspace } from "../utils/workspace"
-import { setupActivity } from "../utils/activity"
+import { setupActivity, setupRecordedActivity } from "../utils/activity"
 
 const directory = "C:/OpenCode/SubagentNavigation"
 
@@ -110,6 +110,34 @@ test("navigates to a subagent child session missing from the session list", asyn
   // Escape returns to the parent session.
   await page.keyboard.press("Escape")
   await Promise.all([expect(page).toHaveURL(sessionHref(parentID)), expectSessionTitle(page, parentTitle)])
+})
+
+test("mobile activity recovers paginated background records missing from the live inventory", async ({ page }) => {
+  const fixture = await setupRecordedActivity(page)
+  const trigger = page.getByRole("button", { name: "Session activity", exact: true })
+  await expect(trigger).toHaveText("1 running · 1 unconfirmed background task")
+  await trigger.click()
+  const drawer = page.getByRole("dialog", { name: "Session activity", exact: true })
+  await expect(drawer.getByRole("region", { name: "Running", exact: true }).getByRole("listitem")).toHaveCount(1)
+  const unknown = drawer.getByRole("region", { name: "Status unavailable", exact: true })
+  await expect(unknown.getByRole("listitem")).toHaveCount(1)
+  await unknown.getByRole("button", { name: /pnpm check:missing/ }).click()
+  await expect(drawer.getByRole("alert")).toHaveText("Could not load output")
+  await drawer.getByRole("button", { name: "Open original call", exact: true }).click()
+  await expect(drawer).toHaveCount(0)
+  await expect(page.getByText("Started missing background check", { exact: true })).toBeVisible()
+
+  await page.reload()
+  await expect(trigger).toHaveText("1 running · 1 unconfirmed background task")
+  const connection = await fixture.transport.waitForConnection()
+  fixture.finish()
+  await fixture.transport.disconnect()
+  await fixture.transport.waitForConnection({ after: connection.id })
+  await expect(trigger).toHaveText("1 running · 1 needs attention")
+  await trigger.click()
+  await expect(drawer.getByRole("region", { name: "Needs attention", exact: true })).toContainText("pnpm check:missing")
+  await expect(drawer.getByRole("region", { name: "Needs attention", exact: true })).toContainText("Failed")
+  await expect(unknown).toHaveCount(0)
 })
 
 test("keeps the parent title anchored when opening a subagent", async ({ page }) => {
