@@ -2,6 +2,8 @@
 
 The `session-activity` branch of <https://github.com/samijaber/opencode> adds an always-visible **Session activity** button above the composer. It opens a bottom sheet with nested subagents, shell commands, permission/question waits, recent failures and completions. Open a session or read/paginate command output directly from the sheet.
 
+Running work has a distinct bordered section with a count. Task titles and parent labels truncate to one line; the full command is available in its scrollable output view. Recently finished work is separated below a divider and starts collapsed. Its heading toggles the list without changing running work.
+
 ## Hosting
 
 `opencode-sami-web` serves `packages/app/dist` on the Worker **route** `opencode.samijaber.com/*`. API requests, uploads and WebSockets pass through to the existing tunnel and authenticated local gateway. SSE responses are streamed. The existing Cloudflare Access application protects the hostname; workers.dev and preview URLs are disabled. The Worker stores no server password.
@@ -52,5 +54,7 @@ To roll back only the custom frontend, run `bunx wrangler deployments list`, the
 ## Verification
 
 On this Mac, three production cold-entry samples had a median stable-render time of **416.3 ms before** and **394.6 ms after**. All six completed successfully; this is a local comparison, not a cross-machine performance guarantee.
+
+The compact/collapsible hierarchy revision also passed the full 14-case keeper, 20 repeated activity cases at five-worker concurrency, and mobile WebKit. Its three-sample cold-entry medians were **466.8 ms before** and **419.5 ms after**. Long multiline commands are covered by a bounded-row-height assertion; completed rows are checked as hidden by default and expandable/collapsible.
 
 The repository-wide `bun run check`, focused classification tests, and the 14-case child-navigation keeper pass. The activity cases also pass in mobile WebKit; the sheet was visually checked at 390px and 320px with English in LTR and RTL. The separate `typecheck:e2e` currently reports upstream DOM-overload errors in `performance/terminals/probe.ts`, `performance/timeline/session-timeline-stream-probe.ts`, and `regression/timeline-stream.spec.ts`; no activity files appear in those diagnostics.

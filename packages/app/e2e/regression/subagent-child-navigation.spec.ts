@@ -45,14 +45,24 @@ test("mobile activity lists nested work and opens command output and child conve
   const drawer = page.getByRole("dialog", { name: "Session activity", exact: true })
   const running = drawer.getByRole("region", { name: "Running", exact: true })
   await expect(running.getByRole("listitem")).toHaveCount(3)
-  await running.getByRole("button", { name: /pnpm test:integration/ }).click()
+  const command = running.getByRole("button", { name: /pnpm test:integration/ })
+  await expect(command).toBeVisible()
+  // A long, multiline command must remain a compact two-line task row on a phone.
+  expect((await command.boundingBox())?.height).toBeLessThanOrEqual(64)
+  await command.click()
   await expect(drawer.getByText("Synthetic integration tests: 12 passed")).toBeVisible()
   await drawer.getByRole("button", { name: "Navigate back", exact: true }).click()
   await fixture.finishShell()
   await expect(running.getByRole("listitem")).toHaveCount(2)
-  await expect(drawer.getByRole("region", { name: "Recently finished", exact: true })).toContainText(
-    "pnpm test:integration",
-  )
+  const recent = drawer.getByRole("region", { name: "Recently finished", exact: true })
+  const disclosure = recent.getByRole("button", { name: /Recently finished/ })
+  await expect(disclosure).toHaveAttribute("aria-expanded", "false")
+  await expect(recent.getByRole("listitem")).toHaveCount(0)
+  await disclosure.click()
+  await expect(recent).toContainText("pnpm test:integration")
+  await disclosure.click()
+  await expect(disclosure).toHaveAttribute("aria-expanded", "false")
+  await expect(recent.getByRole("button", { name: /pnpm test:integration/ })).toHaveCount(0)
   await running.getByRole("button", { name: /Check migrations/ }).click()
   await expect(page).toHaveURL(sessionHref(fixture.nested.id))
   await expect(page.getByText("Review the synthetic fixture", { exact: true })).toBeVisible()
@@ -70,6 +80,7 @@ test("mobile activity reconciles missed completions and permissions after reconn
   fixture.finish()
   await fixture.transport.disconnect()
   await fixture.transport.waitForConnection({ after: connection.id })
+  await drawer.getByRole("button", { name: /Recently finished/ }).click()
   await expect(
     drawer.getByRole("region", { name: "Recently finished", exact: true }).getByRole("listitem"),
   ).toHaveCount(2)
@@ -80,6 +91,8 @@ test("mobile activity reconciles missed completions and permissions after reconn
   await page.reload()
   await expect(trigger).toHaveText("1 needs attention")
   await trigger.click()
+  await expect(drawer.getByRole("button", { name: /Recently finished/ })).toHaveAttribute("aria-expanded", "false")
+  await drawer.getByRole("button", { name: /Recently finished/ }).click()
   await expect(
     drawer.getByRole("region", { name: "Recently finished", exact: true }).getByRole("listitem"),
   ).toHaveCount(2)

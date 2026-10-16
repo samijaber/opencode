@@ -6,6 +6,7 @@
 
 .session-activity-trigger,
 .session-activity-row,
+.session-activity-disclosure,
 .session-activity-action {
   min-height: 44px;
   border-radius: 8px;
@@ -18,6 +19,7 @@
 
 .session-activity-trigger:focus-visible,
 .session-activity-row:focus-visible,
+.session-activity-disclosure:focus-visible,
 .session-activity-action:focus-visible {
   outline: 2px solid var(--v2-border-border-focus);
   outline-offset: -2px;
@@ -25,6 +27,7 @@
 
 .session-activity-trigger:hover,
 .session-activity-row:hover,
+.session-activity-disclosure:hover,
 .session-activity-action:hover {
   background: var(--v2-overlay-simple-overlay-hover);
 }
@@ -45,9 +48,59 @@
   line-height: var(--line-height-base);
 }
 .session-activity-body h3 {
-  padding: 12px 8px 4px;
+  margin: 0;
   font-weight: 600;
-  overflow-wrap: anywhere;
+}
+.session-activity-group {
+  margin-block-end: 12px;
+  border: 1px solid var(--v2-border-border-base);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.session-activity-running {
+  border-color: var(--v2-border-border-strong);
+  background: var(--v2-background-bg-base);
+}
+.session-activity-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-block-end: 1px solid var(--v2-border-border-base);
+  font-size: 14px;
+}
+.session-activity-count {
+  margin-inline-start: auto;
+  padding-inline: 7px;
+  border-radius: 6px;
+  background: var(--v2-overlay-simple-overlay-hover);
+  color: var(--v2-text-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.session-activity-running-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--v2-state-fg-info);
+}
+.session-activity-recent {
+  margin-block-start: 16px;
+  padding-block-start: 8px;
+  border-block-start: 1px solid var(--v2-border-border-strong);
+}
+.session-activity-disclosure {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 8px;
+  color: var(--v2-text-text-muted);
+}
+.session-activity-recent .session-activity-label {
+  color: var(--v2-text-text-muted);
+  font-weight: 400;
 }
 .session-activity-body p {
   padding: 8px;
@@ -64,6 +117,10 @@
   gap: 10px;
   width: 100%;
   padding: 10px 8px;
+  border-radius: 0;
+}
+.session-activity-body li + li {
+  border-block-start: 1px solid var(--v2-border-border-base);
 }
 .session-activity-details {
   display: flex;
@@ -72,9 +129,15 @@
   flex: 1;
   gap: 4px;
 }
-.session-activity-details > bdi {
-  white-space: normal;
-  overflow-wrap: anywhere;
+.session-activity-label,
+.session-activity-parent {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.session-activity-label {
+  font-weight: 500;
 }
 .session-activity-parent {
   border-inline-start: 2px solid var(--v2-border-border-base);
@@ -83,6 +146,8 @@
 .session-activity-meta {
   display: flex;
   gap: 12px;
+  white-space: nowrap;
+  line-height: var(--line-height-compact);
   font-variant-numeric: tabular-nums;
 }
 .session-activity-meta,
@@ -95,6 +160,17 @@
 }
 .session-activity-action {
   padding-inline: 12px;
+}
+.session-activity-command {
+  margin: 8px;
+  padding: 12px;
+  max-height: 96px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--v2-background-bg-base);
+  border: 1px solid var(--v2-border-border-base);
+  border-radius: 8px;
 }
 .session-activity-output {
   white-space: pre-wrap;

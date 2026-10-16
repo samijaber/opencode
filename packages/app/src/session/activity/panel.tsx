@@ -1,4 +1,4 @@
-import { createEffect, createMemo, For, on, onCleanup, Show } from "solid-js"
+import { createEffect, createMemo, createUniqueId, For, on, onCleanup, Show } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Icon } from "@opencode/ui/icon"
 import { useLanguage } from "@/runtime/i18n/language"
@@ -16,8 +16,10 @@ export function SessionActivityPanel(props: { sessionID: string }) {
   const sdk = useServerSDK()
   const language = useLanguage()
   const openRoute = useOpenSessionRoute()
+  const recentID = createUniqueId()
   const [state, setState] = createStore<{
     open: boolean
+    recentOpen: boolean
     ready: boolean
     failed: boolean
     now: number
@@ -30,6 +32,7 @@ export function SessionActivityPanel(props: { sessionID: string }) {
     cursor: number
   }>({
     open: false,
+    recentOpen: false,
     ready: false,
     failed: false,
     now: Date.now(),
@@ -90,7 +93,7 @@ export function SessionActivityPanel(props: { sessionID: string }) {
   createEffect(
     on(
       () => props.sessionID,
-      () => setState({ open: false, output: undefined }),
+      () => setState({ open: false, recentOpen: false, output: undefined }),
     ),
   )
   createEffect(() => {
@@ -157,6 +160,37 @@ export function SessionActivityPanel(props: { sessionID: string }) {
       ? language.t("session.activity.stale")
       : language.t(`session.activity.status.${item.status}`)
 
+  const rows = (items: ActivityItem[]) => (
+    <ul>
+      <For each={items}>
+        {(item) => (
+          <li>
+            <button type="button" class="session-activity-row" onClick={() => open(item)}>
+              <Icon name={item.type === "shell" ? "console" : "branch"} />
+              <span class="session-activity-details">
+                <bdi class="session-activity-label" dir={item.type === "shell" ? "ltr" : "auto"} title={item.label}>
+                  {item.label}
+                </bdi>
+                <Show when={item.parentID && item.parentID !== props.sessionID}>
+                  <span class="session-activity-parent">
+                    <bdi>{data.session.get(item.parentID!)?.title ?? item.parentID}</bdi>
+                  </span>
+                </Show>
+                <span class="session-activity-meta">
+                  <span>{status(item)}</span>
+                  <time>{elapsed(item)}</time>
+                </span>
+              </span>
+              <span class="session-activity-link">
+                {language.t(item.type === "shell" ? "session.activity.output" : "session.activity.open")}
+              </span>
+            </button>
+          </li>
+        )}
+      </For>
+    </ul>
+  )
+
   return (
     <div class="session-activity">
       <button
@@ -195,43 +229,46 @@ export function SessionActivityPanel(props: { sessionID: string }) {
               when={state.output}
               fallback={
                 <>
-                  <For each={["attention", "running", "unknown", "recent"] as const}>
+                  <For each={["attention", "running", "unknown"] as const}>
                     {(group) => (
                       <Show when={activity()[group].length}>
-                        <section aria-label={language.t(`session.activity.group.${group}`)}>
-                          <h3>{language.t(`session.activity.group.${group}`)}</h3>
-                          <ul>
-                            <For each={activity()[group]}>
-                              {(item) => (
-                                <li>
-                                  <button type="button" class="session-activity-row" onClick={() => open(item)}>
-                                    <Icon name={item.type === "shell" ? "console" : "branch"} />
-                                    <span class="session-activity-details">
-                                      <bdi dir={item.type === "shell" ? "ltr" : "auto"}>{item.label}</bdi>
-                                      <Show when={item.parentID && item.parentID !== props.sessionID}>
-                                        <span class="session-activity-parent">
-                                          <bdi>{data.session.get(item.parentID!)?.title ?? item.parentID}</bdi>
-                                        </span>
-                                      </Show>
-                                      <span class="session-activity-meta">
-                                        <span>{status(item)}</span>
-                                        <time>{elapsed(item)}</time>
-                                      </span>
-                                    </span>
-                                    <span class="session-activity-link">
-                                      {language.t(
-                                        item.type === "shell" ? "session.activity.output" : "session.activity.open",
-                                      )}
-                                    </span>
-                                  </button>
-                                </li>
-                              )}
-                            </For>
-                          </ul>
+                        <section
+                          class="session-activity-group"
+                          classList={{ "session-activity-running": group === "running" }}
+                          aria-label={language.t(`session.activity.group.${group}`)}
+                        >
+                          <h3 class="session-activity-heading">
+                            <Show when={group === "running"}>
+                              <span class="session-activity-running-dot" aria-hidden="true" />
+                            </Show>
+                            <span>{language.t(`session.activity.group.${group}`)}</span>
+                            <span class="session-activity-count">{activity()[group].length}</span>
+                          </h3>
+                          {rows(activity()[group])}
                         </section>
                       </Show>
                     )}
                   </For>
+                  <Show when={activity().recent.length}>
+                    <section class="session-activity-recent" aria-label={language.t("session.activity.group.recent")}>
+                      <h3>
+                        <button
+                          type="button"
+                          class="session-activity-disclosure"
+                          aria-expanded={state.recentOpen}
+                          aria-controls={recentID}
+                          onClick={() => setState("recentOpen", (open) => !open)}
+                        >
+                          <Icon name="chevron-down" classList={{ "rotate-180": state.recentOpen }} />
+                          <span>{language.t("session.activity.group.recent")}</span>
+                          <span class="session-activity-count">{activity().recent.length}</span>
+                        </button>
+                      </h3>
+                      <div id={recentID} hidden={!state.recentOpen}>
+                        <Show when={state.recentOpen}>{rows(activity().recent)}</Show>
+                      </div>
+                    </section>
+                  </Show>
                   <Show when={fresh() && !Object.values(activity()).some((items) => items.length)}>
                     <p>{language.t("session.activity.empty")}</p>
                   </Show>
@@ -243,9 +280,9 @@ export function SessionActivityPanel(props: { sessionID: string }) {
                   <button type="button" class="session-activity-action" onClick={() => setState("output", undefined)}>
                     {language.t("common.goBack")}
                   </button>
-                  <h3>
-                    <bdi dir="ltr">{item().label}</bdi>
-                  </h3>
+                  <pre class="session-activity-command" dir="ltr">
+                    {item().label}
+                  </pre>
                   <button
                     type="button"
                     class="session-activity-action"

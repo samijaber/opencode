@@ -14,7 +14,14 @@ export async function setupActivity(page: Page, attention = false) {
   const commands: ShellInfo[] = [
     {
       id: "sh_activity_tests",
-      command: "pnpm test:integration",
+      command: [
+        "pnpm test:integration \\",
+        ...Array.from(
+          { length: 8 },
+          (_, index) => `  --fixture-${index}=a-long-synthetic-configuration-value-for-mobile-layout \\`,
+        ),
+        "  --reporter=verbose",
+      ].join("\n"),
       cwd: directory,
       shell: "zsh",
       file: "/fixture/output",
