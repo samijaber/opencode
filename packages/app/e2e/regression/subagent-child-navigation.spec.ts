@@ -6,6 +6,7 @@ import { currentSession } from "../utils/mock-server"
 import { assistantMessage, session, sessionID, setupTimeline, textPart, userMessage } from "../utils/timeline"
 import { expectSessionTitle } from "../utils/waits"
 import { mockWorkspace } from "../utils/workspace"
+import { setupActivity } from "../utils/activity"
 
 const directory = "C:/OpenCode/SubagentNavigation"
 
@@ -35,6 +36,55 @@ const taskDescription = "Inspect child navigation"
 
 test.use({ viewport: { width: 1440, height: 900 } })
 
+test("mobile activity lists nested work and opens command output and child conversations", async ({ page }) => {
+  const fixture = await setupActivity(page)
+  const trigger = page.getByRole("button", { name: "Session activity", exact: true })
+  await expect(trigger).toHaveText("3 running")
+  await expect(trigger).toBeInViewport()
+  await trigger.click()
+  const drawer = page.getByRole("dialog", { name: "Session activity", exact: true })
+  const running = drawer.getByRole("region", { name: "Running", exact: true })
+  await expect(running.getByRole("listitem")).toHaveCount(3)
+  await running.getByRole("button", { name: /pnpm test:integration/ }).click()
+  await expect(drawer.getByText("Synthetic integration tests: 12 passed")).toBeVisible()
+  await drawer.getByRole("button", { name: "Navigate back", exact: true }).click()
+  await fixture.finishShell()
+  await expect(running.getByRole("listitem")).toHaveCount(2)
+  await expect(drawer.getByRole("region", { name: "Recently finished", exact: true })).toContainText(
+    "pnpm test:integration",
+  )
+  await running.getByRole("button", { name: /Check migrations/ }).click()
+  await expect(page).toHaveURL(sessionHref(fixture.nested.id))
+  await expect(page.getByText("Review the synthetic fixture", { exact: true })).toBeVisible()
+  await expect(drawer).toHaveCount(0)
+})
+
+test("mobile activity reconciles missed completions and permissions after reconnect and reload", async ({ page }) => {
+  const fixture = await setupActivity(page, true)
+  const trigger = page.getByRole("button", { name: "Session activity", exact: true })
+  await expect(trigger).toHaveText("2 running · 1 needs attention")
+  await trigger.click()
+  const drawer = page.getByRole("dialog", { name: "Session activity", exact: true })
+  await expect(drawer.getByRole("region", { name: "Needs attention", exact: true })).toContainText("Check migrations")
+  const connection = await fixture.transport.waitForConnection()
+  fixture.finish()
+  await fixture.transport.disconnect()
+  await fixture.transport.waitForConnection({ after: connection.id })
+  await expect(
+    drawer.getByRole("region", { name: "Recently finished", exact: true }).getByRole("listitem"),
+  ).toHaveCount(2)
+  await expect(drawer.getByRole("region", { name: "Needs attention", exact: true })).toContainText("Failed")
+  await expect(drawer.getByText("Permission needed", { exact: true })).toHaveCount(0)
+  await drawer.getByRole("button", { name: "Close", exact: true }).click()
+  await expect(trigger).toHaveText("1 needs attention")
+  await page.reload()
+  await expect(trigger).toHaveText("1 needs attention")
+  await trigger.click()
+  await expect(
+    drawer.getByRole("region", { name: "Recently finished", exact: true }).getByRole("listitem"),
+  ).toHaveCount(2)
+})
+
 test("navigates to a subagent child session missing from the session list", async ({ page }) => {
   await setup(page)
   await openChildFromParent(page)
@@ -61,7 +111,9 @@ test("keeps the parent title anchored when opening a subagent", async ({ page })
     // Measuring before then can read the detached heading, whose empty bounds put the start at 0.
     const agents = page.getByRole("button", { name: "Used 1 Agent", exact: true })
     await expect(agents).toBeVisible()
-    const start = await titleInlineStart(page.locator("[data-session-title]").getByRole("heading", { name: parentTitle }))
+    const start = await titleInlineStart(
+      page.locator("[data-session-title]").getByRole("heading", { name: parentTitle }),
+    )
 
     await agents.click()
     await page.locator(`a[href="${sessionHref(childID)}"]`).click()

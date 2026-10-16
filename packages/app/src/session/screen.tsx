@@ -38,6 +38,7 @@ import { SessionReviewToggle } from "./header/session-header-actions"
 import { SessionRunningMenu } from "./header/session-running-menu"
 import { createAnimatedPresence } from "@/runtime/animated-presence"
 import { createTimelineCache } from "./timeline/cache"
+import { SessionActivityPanel } from "./activity/panel"
 
 export function SessionScreenView(props: { session: SessionModel }) {
   // The timeline cache captures its owner when created, so link handling must be provided above it.
@@ -358,6 +359,9 @@ function SessionScreenContent(props: {
         </Switch>
       </div>
 
+      <Show when={session.identity.params.id} keyed>
+        {(id) => <SessionActivityPanel sessionID={id} />}
+      </Show>
       <Show when={composer.active()} keyed>
         {(model) => (
           <ActiveSessionComposerRegion session={session} model={model} suggestionBoundary={timeline.scroller} />

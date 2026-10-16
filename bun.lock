@@ -996,6 +996,15 @@
         "wrangler": "4.110.0",
       },
     },
+    "services/sami-web": {
+      "name": "@opencode/sami-web",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@cloudflare/workers-types": "catalog:",
+        "@typescript/native-preview": "catalog:",
+        "wrangler": "4.110.0",
+      },
+    },
     "services/update": {
       "name": "@opencode/update",
       "version": "2.0.31",
@@ -2056,6 +2065,8 @@
     "@opencode/posts": ["@opencode/posts@workspace:packages/posts"],
 
     "@opencode/protocol": ["@opencode/protocol@workspace:packages/protocol"],
+
+    "@opencode/sami-web": ["@opencode/sami-web@workspace:services/sami-web"],
 
     "@opencode/schema": ["@opencode/schema@workspace:packages/schema"],
 

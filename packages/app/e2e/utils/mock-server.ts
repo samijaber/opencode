@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test"
-import type { OpenCodeEvent, SessionMessageInfo } from "@opencode/client/promise"
+import type { OpenCodeEvent, SessionMessageInfo, ShellInfo } from "@opencode/client/promise"
 import { Permission } from "@opencode/schema/permission"
 import { Worktree } from "@opencode/schema/worktree"
 import { Duration, Effect, Layer, Option, Predicate, Schema } from "effect"
@@ -53,7 +53,7 @@ export interface MockServerConfig {
   // Terminal shells the settings offer (`/api/config/shell`).
   shells?: unknown[]
   // Background shell commands (`GET /api/shell`).
-  shellCommands?: Resolvable<unknown[]>
+  shellCommands?: Resolvable<ShellInfo[]>
   // All output a shell command has captured so far in `directory`, or undefined for an unknown command (404
   // ShellNotFoundError). The mock pages it like the server: from the request's byte `cursor`, at most `limit` bytes
   // (default 65,536).
@@ -1079,8 +1079,17 @@ function mockHandlers(
         shell: (ctx) =>
           Effect.sync(() => ({
             location: location(config, requestDirectory(config, ctx.request)),
-            data: resolve(config.shellCommands ?? []),
+            data: resolve(config.shellCommands ?? []).filter((item) => item.status === "running"),
           })),
+        shellGet: (ctx) =>
+          Effect.suspend(() => {
+            const info = resolve(config.shellCommands ?? []).find((item) => item.id === ctx.params.id)
+            if (!info)
+              return Effect.fail(
+                new MockShellNotFound({ id: ctx.params.id, message: `Shell command not found: ${ctx.params.id}` }),
+              )
+            return Effect.succeed({ location: location(config, requestDirectory(config, ctx.request)), data: info })
+          }),
         shellOutput: (ctx) =>
           Effect.suspend(() => {
             const directory = requestDirectory(config, ctx.request)

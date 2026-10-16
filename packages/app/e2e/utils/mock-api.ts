@@ -234,6 +234,13 @@ const Group = HttpApiGroup.make("mock")
   )
   .add(HttpApiEndpoint.get("shell", "/api/shell", { success: Json }))
   .add(
+    HttpApiEndpoint.get("shellGet", "/api/shell/:id", {
+      params: { id: Schema.String },
+      success: Json,
+      error: MockShellNotFound,
+    }),
+  )
+  .add(
     HttpApiEndpoint.get("shellOutput", "/api/shell/:id/output", {
       params: { id: Schema.String },
       success: Json,

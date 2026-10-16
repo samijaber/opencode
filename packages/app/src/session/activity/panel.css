@@ -1,0 +1,105 @@
+.session-activity {
+  flex-shrink: 0;
+  padding-inline: 12px;
+  background: var(--v2-background-bg-base);
+}
+
+.session-activity-trigger,
+.session-activity-row,
+.session-activity-action {
+  min-height: 44px;
+  border-radius: 8px;
+  text-align: start;
+  font-size: 13px;
+  line-height: var(--line-height-base);
+  color: var(--v2-text-text-base);
+  cursor: pointer;
+}
+
+.session-activity-trigger:focus-visible,
+.session-activity-row:focus-visible,
+.session-activity-action:focus-visible {
+  outline: 2px solid var(--v2-border-border-focus);
+  outline-offset: -2px;
+}
+
+.session-activity-trigger:hover,
+.session-activity-row:hover,
+.session-activity-action:hover {
+  background: var(--v2-overlay-simple-overlay-hover);
+}
+
+.session-activity-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+}
+
+.session-activity-trigger > span {
+  flex: 1;
+}
+.session-activity-body {
+  font-size: 13px;
+  line-height: var(--line-height-base);
+}
+.session-activity-body h3 {
+  padding: 12px 8px 4px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.session-activity-body p {
+  padding: 8px;
+  color: var(--v2-text-text-muted);
+}
+.session-activity-body ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.session-activity-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 8px;
+}
+.session-activity-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  gap: 4px;
+}
+.session-activity-details > bdi {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.session-activity-parent {
+  border-inline-start: 2px solid var(--v2-border-border-base);
+  padding-inline-start: 8px;
+}
+.session-activity-meta {
+  display: flex;
+  gap: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.session-activity-meta,
+.session-activity-parent {
+  color: var(--v2-text-text-muted);
+}
+.session-activity-link {
+  flex-shrink: 0;
+  color: var(--v2-text-text-muted);
+}
+.session-activity-action {
+  padding-inline: 12px;
+}
+.session-activity-output {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 8px;
+  max-height: 45dvh;
+  overflow: auto;
+}
