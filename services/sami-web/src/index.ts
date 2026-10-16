@@ -5,6 +5,7 @@ export default {
     // A route (not a Workers Custom Domain) preserves the tunnel origin. Forward the original request
     // and response without buffering: SSE, uploads, cookies and WebSocket upgrades keep their semantics.
     if (
+      url.pathname === "/api" ||
       url.pathname.startsWith("/api/") ||
       url.pathname.startsWith("/auth/") ||
       url.pathname === "/openapi.json" ||
