@@ -21,7 +21,7 @@ export function createHomeController() {
 
   const focusedServerCtx = useServerCtx(focusedServer)
   const focusedSync = () => focusedServerCtx()?.sync
-  const projects = createMemo(() => focusedServerCtx()?.projects.list() ?? [])
+  const projects = createMemo(() => focusedServerCtx()?.projects.available() ?? [])
   const recentlyClosed = createMemo(() => focusedServerCtx()?.projects.recentlyClosed() ?? [])
   const homedir = createMemo(() => focusedSync()?.data.path.home ?? "")
   const selectedProject = createMemo(() => projects().find((project) => project.worktree === selection().directory))
@@ -64,7 +64,7 @@ export function createHomeController() {
     if (
       global
         .ensureServerCtx(conn)
-        .projects.list()
+        .projects.available()
         .some((project) => pathKey(project.worktree) === pathKey(directory))
     )
       return
@@ -114,7 +114,7 @@ export function createHomeController() {
       homedir,
       selected: selectedProject,
       newSession: newSessionProject,
-      forServer: (conn: ServerConnection.Any) => global.ensureServerCtx(conn).projects.list(),
+      forServer: (conn: ServerConnection.Any) => global.ensureServerCtx(conn).projects.available(),
       select: (conn: ServerConnection.Any, directory: string) => {
         const key = ServerConnection.key(conn)
 
@@ -123,7 +123,7 @@ export function createHomeController() {
         if (
           !global
             .ensureServerCtx(conn)
-            .projects.list()
+            .projects.available()
             .some((project) => project.worktree === directory)
         )
           return

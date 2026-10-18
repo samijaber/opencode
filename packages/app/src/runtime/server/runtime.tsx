@@ -2,6 +2,7 @@ import { createSimpleContext } from "@opencode/ui/context"
 import { Accessor, batch, createEffect, createMemo, createResource, createRoot, getOwner, untrack } from "solid-js"
 import { createServerProjects, RECENTLY_CLOSED_DISPLAY_LIMIT, ServerConnection, useServers } from "./registry"
 import { pathKey } from "@/workspaces/path-key"
+import { projectInventory } from "@/workspaces/project-inventory"
 import { useServerHealth } from "@/runtime/server/health"
 import { createServerSdkContext } from "./client"
 import { createServerSyncContext } from "./sync"
@@ -223,6 +224,13 @@ function createServerController(
   }
 
   const projectsList = createMemo(() => projects.list().map(enrich))
+  const availableProjects = createMemo(() =>
+    projectInventory(
+      projectsList(),
+      sync.data.project.map((project) => ({ ...project, expanded: false })),
+      projects.closed(),
+    ),
+  )
 
   const forSession = (session: SessionInfo) => {
     const project = resolveProjectForSession(session, projectsList(), sync.data.project)
@@ -256,6 +264,7 @@ function createServerController(
     projects: {
       ...projects,
       list: projectsList,
+      available: availableProjects,
       forSession,
       detailsForSession,
       resolve: enrich,

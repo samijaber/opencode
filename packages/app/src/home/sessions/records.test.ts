@@ -29,12 +29,13 @@ describe("buildHomeSessionRecords", () => {
 
   test("filters sessions when a project is selected", () => {
     const records = buildHomeSessionRecords({
-      sessions: () => sessions,
+      sessions: () => [...sessions, session("worktree", "/unloaded/worktree", "project-a")],
       projectDirectories: () => ["/repo/a"],
+      projectID: () => "project-a",
       projects: () => [opened],
     })
 
-    expect(records.map((record) => record.session.id)).toEqual(["a"])
+    expect(records.map((record) => record.session.id)).toEqual(["a", "worktree"])
   })
 
   test("labels a worktree session with its project before that project's inventory has loaded", () => {

@@ -19,14 +19,14 @@ export function createComposerProjectControls(props: { draftId: string; worktree
   const projectServerCtx = useServerCtx(projectServer)
 
   const projects = createMemo(() => {
-    if (servers.list.length <= 1) return projectServerCtx().projects.list()
+    if (servers.list.length <= 1) return projectServerCtx().projects.available()
 
     return servers.list.flatMap((connection) => {
       const server = { key: ServerConnection.key(connection), name: serverName(connection) }
 
       return global
         .ensureServerCtx(connection)
-        .projects.list()
+        .projects.available()
         .map((project) => ({ ...project, server }))
     })
   })

@@ -18,14 +18,21 @@ export function homeSessionLocation(directory: string, branch?: string) {
 export function buildHomeSessionRecords(input: {
   sessions: () => SessionInfo[]
   projectDirectories: () => string[] | undefined
+  projectID?: () => string | undefined
   projects: () => LocalProject[]
   resolveProject?: (session: SessionInfo) => LocalProject | undefined
 }) {
   const selected = input.projectDirectories()
   const directories = selected ? new Set(selected.map(pathKey)) : undefined
+  const projectID = input.projectID?.()
 
   const sessions = directories
-    ? input.sessions().filter((session) => directories.has(pathKey(session.location.directory)))
+    ? input
+        .sessions()
+        .filter(
+          (session) =>
+            directories.has(pathKey(session.location.directory)) || (!!projectID && session.projectID === projectID),
+        )
     : input.sessions()
 
   return [...new Map(sessions.map((session) => [session.id, session] as const)).values()]

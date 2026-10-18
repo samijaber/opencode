@@ -1,11 +1,65 @@
 import { expect, test, type Page } from "@playwright/test"
-import { expectPath, holdRoute, NO_PROVIDER, project, REMOTE_SERVER, seed, sessionHref } from "../utils/app"
+import { expectPath, holdRoute, NO_PROVIDER, project, REMOTE_SERVER, seed, session, sessionHref } from "../utils/app"
 import { mockOpenCodeServer } from "../utils/mock-server"
 import { fixture, mockStressTimeline } from "../utils/session-fixture"
 import { mockRemoteServer } from "../utils/workspace"
 import { APP_READY_TIMEOUT, expectAppVisible } from "../utils/waits"
 
 test.use({ serviceWorkers: "block" })
+
+test("mobile project discovery includes server projects and returns to all sessions", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const home = project({ id: "proj_home", directory: "C:/OpenCode/Home", name: "Home folder" })
+  const code = project({ id: "proj_code", directory: "C:/OpenCode/Code", name: "OpenCode" })
+  await mockOpenCodeServer(page, {
+    directory: home.worktree,
+    project: home,
+    projects: [home, code],
+    worktrees: [],
+    provider: NO_PROVIDER,
+    sessions: [
+      session({ id: "ses_home", directory: home.worktree, projectID: home.id, title: "Home conversation" }),
+      session({ id: "ses_animations", directory: code.worktree, projectID: code.id, title: "Faster page transitions" }),
+    ],
+    pageMessages: () => ({ items: [] }),
+  })
+  await seed(page, { projects: { local: [{ worktree: home.worktree, expanded: true }] } })
+  await page.goto("/")
+  await expect(row(page, "Faster page transitions")).toBeEnabled()
+  const picker = page.getByRole("button", { name: "Projects", exact: true })
+  await picker.click()
+  const codeRow = page.locator('[data-component="home-project-row"]').filter({ hasText: "OpenCode" })
+  await expect(codeRow).toBeVisible()
+  await codeRow.click()
+  await expect(row(page, "Home conversation")).toHaveCount(0)
+  await expect(row(page, "Faster page transitions")).toBeEnabled()
+  await picker.click()
+  await page.getByRole("button", { name: "All projects", exact: true }).click()
+  await expect(row(page, "Home conversation")).toBeEnabled()
+  await expect(row(page, "Faster page transitions")).toBeEnabled()
+  const search = page.getByRole("textbox", { name: "Search sessions", exact: true })
+  await search.fill("Faster page transitions")
+  await expect(page.getByRole("option")).toContainText("Faster page transitions")
+  await search.fill("")
+  await expect(page.getByRole("option")).toHaveCount(0)
+  await page.locator('[data-action="home-new-session"]').click()
+  await expect(page.locator('[data-component="composer-editor"]')).toBeEditable()
+  await page.locator('[data-action="prompt-project"]').click()
+  await expect(page.getByRole("menuitemradio")).toHaveCount(2)
+  await expect(page.getByRole("menuitemradio", { name: /Home folder$/ })).toBeVisible()
+  await expect(page.getByRole("menuitemradio", { name: /OpenCode$/ })).toBeVisible()
+})
+
+test("desktop Home exposes an explicit all-projects reset", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await openHome(page)
+  const projectRow = page.locator('[data-component="home-project-row"]').filter({ hasText: fixture.project.name })
+  await projectRow.click()
+  await expect(projectRow).toHaveAttribute("data-selected", "")
+  await page.getByRole("button", { name: "All projects", exact: true }).click()
+  await expect(projectRow).not.toHaveAttribute("data-selected", "")
+  await expect(row(page, fixture.expected.targetTitle)).toBeEnabled()
+})
 
 const row = (page: Page, title: string) =>
   page.locator('[data-component="home-session-row"]').filter({ hasText: title })

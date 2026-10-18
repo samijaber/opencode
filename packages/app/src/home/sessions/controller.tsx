@@ -95,6 +95,7 @@ export function createHomeSessionsController(home: HomeController) {
     buildHomeSessionRecords({
       sessions: indexedSessions,
       projectDirectories,
+      projectID: () => home.project.selected()?.id,
       projects: home.project.list,
       resolveProject: (session) => home.server.focusedContext()?.projects.forSession(session),
     }),
@@ -329,6 +330,7 @@ export function createHomeSessionsController(home: HomeController) {
         return buildHomeSessionRecords({
           sessions: () => [result],
           projectDirectories,
+          projectID: () => home.project.selected()?.id,
           projects: home.project.list,
           resolveProject: ctx.projects.forSession,
         })[0]

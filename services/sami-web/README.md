@@ -4,6 +4,8 @@ The `session-activity` branch of <https://github.com/samijaber/opencode> adds an
 
 Running work has a distinct bordered section with a count. Task titles and parent labels truncate to one line; the full command is available in its scrollable output view. Recently finished work is separated below a divider and starts collapsed. Its heading toggles the list without changing running work.
 
+Home and the new-session project picker include known server projects, not just folders opened in this browser. The inventory matches Settings and respects explicitly closed projects. **All projects** resets the Home filter on desktop and in the mobile project dropdown; session search then spans projects. Project filters include sessions from worktrees whose inventories have not loaded yet.
+
 ## Hosting
 
 `opencode-sami-web` serves `packages/app/dist` on the Worker **route** `opencode.samijaber.com/*`. API requests, uploads and WebSockets pass through to the existing tunnel and authenticated local gateway. SSE responses are streamed. The existing Cloudflare Access application protects the hostname; workers.dev and preview URLs are disabled. The Worker stores no server password.
@@ -59,6 +61,8 @@ To roll back only the custom frontend, run `bunx wrangler deployments list`, the
 - A session's elapsed time is its age from creation, not a precise measurement of active execution time.
 
 ## Verification
+
+Project discovery and the explicit Home filter reset pass the 12-case Home keeper (excluding the separately documented macOS modifier-key shortcut case), 20 five-worker repetitions, and the mobile discovery flow in WebKit. The unloaded-worktree filter regression fails before the fix. The production cold-entry medians are **364.5 ms before** and **383.5 ms after** (three samples each); this small local sample is not a performance guarantee. The full repository check and 169 focused unit cases pass. The separate e2e typecheck still reports the existing probe/timeline errors and two activity-helper typing errors; no modified files appear in those diagnostics.
 
 On this Mac, three production cold-entry samples had a median stable-render time of **416.3 ms before** and **394.6 ms after**. All six completed successfully; this is a local comparison, not a cross-machine performance guarantee.
 
