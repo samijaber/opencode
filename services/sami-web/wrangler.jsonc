@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "opencode-sami-web",
+  "account_id": "d180039b00e41e163d3e0919df9622ee",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-16",
+  "workers_dev": false,
+  "preview_urls": false,
+  // Keep the existing DNS, hostname-based Access policy, tunnel and authenticated gateway.
+  "routes": [{ "pattern": "opencode.samijaber.com/*", "zone_name": "samijaber.com" }],
+  "assets": {
+    "directory": "../../packages/app/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true,
+  },
+  "vars": { "BUILD_SHA": "development" },
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "invocation_logs": false },
+    "traces": { "enabled": true, "head_sampling_rate": 0.01 },
+  },
+}

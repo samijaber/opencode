@@ -325,6 +325,25 @@ export const { use: useLanguage, provider: LanguageProvider } = createSimpleCont
       t,
       tDynamic,
       plural,
+      activitySummary(running: number, attention: number, unknown: number) {
+        const summary =
+          running && attention
+            ? t("session.activity.summary", {
+                running: plural("session.activity.running", running),
+                attention: plural("session.activity.attention", attention),
+              })
+            : attention
+              ? plural("session.activity.attention", attention)
+              : running
+                ? plural("session.activity.running", running)
+                : t("session.activity.empty")
+        if (!unknown) return summary
+        if (!running && !attention) return plural("session.activity.unconfirmed", unknown)
+        return t("session.activity.summaryUnknown", {
+          summary,
+          unknown: plural("session.activity.unconfirmed", unknown),
+        })
+      },
       pluralForm,
       rich,
       list,

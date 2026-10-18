@@ -1,0 +1,17 @@
+{
+  "name": "@opencode/sami-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun run --cwd ../../packages/app build && bun prepare-assets.mjs",
+    "deploy": "wrangler deploy --var BUILD_SHA:$(git rev-parse HEAD)",
+    "typecheck": "tsgo --noEmit",
+    "types": "wrangler types --include-runtime=false"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "wrangler": "4.110.0"
+  }
+}
