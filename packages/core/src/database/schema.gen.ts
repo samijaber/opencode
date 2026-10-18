@@ -192,6 +192,7 @@ const schema: Omit<DatabaseMigration.Migration, "id"> = {
           \`directory\` text NOT NULL,
           \`path\` text,
           \`title\` text,
+          \`branch\` text,
           \`version\` text NOT NULL,
           \`share_url\` text,
           \`summary_additions\` integer,

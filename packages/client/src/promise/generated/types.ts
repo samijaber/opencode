@@ -40,6 +40,8 @@ export type PluginFeatures = { server?: true; tui?: true; rpc?: true }
 
 export type PluginState = { status: "active" } | { status: "failed"; error: string; ref?: string }
 
+export type SessionMerge = { state: "unknown" | "unmerged" | "merged"; branch?: string; target?: string; url?: string }
+
 export type SessionID = string
 
 export type SessionMessageID = string
@@ -305,6 +307,15 @@ export type ConfigModelReasoning =
 export type ConfigShellOption = { path: string; name: string; acceptable: boolean }
 
 export type LocationPublicRef = { directory: AbsolutePath }
+
+export type SessionBranch = {
+  directory: AbsolutePath
+  repository: AbsolutePath
+  name: string
+  target: string
+  commit: string
+  start?: string
+}
 
 export type FileSystemWrite = { path: AbsolutePath }
 
@@ -998,6 +1009,16 @@ export type SessionRenamed = {
   durable: { aggregateID: string; seq: EventSeq; version: 1 }
   location?: LocationRef
   data: { sessionID: SessionID; title: string }
+}
+
+export type SessionBranchUpdated = {
+  id: EventID
+  created: number
+  metadata?: { [x: string]: any }
+  type: "session.branch.updated"
+  durable: { aggregateID: string; seq: EventSeq; version: 1 }
+  location?: LocationRef
+  data: { sessionID: SessionID; branch: SessionBranch }
 }
 
 export type SessionMetadataUpdated = {
@@ -2109,6 +2130,7 @@ export type SessionInfo = {
   outcome?: "succeeded" | "failed" | "interrupted"
   time: { created: number; updated: number; idle?: number; viewed?: number; archived?: number }
   title?: string
+  branch?: SessionBranch
   subpath?: RelativePath
   metadata?: SessionMetadata
   permissions?: PermissionRuleset
@@ -2504,6 +2526,7 @@ export type SessionEventDurable =
   | SessionModelSelected
   | SessionMoved
   | SessionRenamed
+  | SessionBranchUpdated
   | SessionMetadataUpdated
   | SessionPermissions
   | SessionViewed
@@ -2567,6 +2590,7 @@ export type V2Event =
   | SessionModelSelected
   | SessionMoved
   | SessionRenamed
+  | SessionBranchUpdated
   | SessionMetadataUpdated
   | SessionPermissions
   | SessionViewed
@@ -2688,10 +2712,6 @@ export type AgentNotFoundError = {
 export const isAgentNotFoundError = (value: unknown): value is AgentNotFoundError =>
   typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "AgentNotFoundError"
 
-export type InvalidCursorError = { readonly _tag: "InvalidCursorError"; readonly message: string }
-export const isInvalidCursorError = (value: unknown): value is InvalidCursorError =>
-  typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "InvalidCursorError"
-
 export type SessionNotFoundError = {
   readonly _tag: "SessionNotFoundError"
   readonly sessionID: string
@@ -2699,6 +2719,10 @@ export type SessionNotFoundError = {
 }
 export const isSessionNotFoundError = (value: unknown): value is SessionNotFoundError =>
   typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "SessionNotFoundError"
+
+export type InvalidCursorError = { readonly _tag: "InvalidCursorError"; readonly message: string }
+export const isInvalidCursorError = (value: unknown): value is InvalidCursorError =>
+  typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "InvalidCursorError"
 
 export type ConflictError = {
   readonly _tag: "ConflictError"
@@ -2945,6 +2969,10 @@ export type PluginUpdateInput = {
 }
 
 export type PluginUpdateOutput = void
+
+export type SessionMergeInput = { readonly sessionID: { readonly sessionID: string }["sessionID"] }
+
+export type SessionMergeOutput = { data: SessionMerge }["data"]
 
 export type SessionListInput = {
   readonly limit?: {
@@ -3218,6 +3246,14 @@ export type SessionImportInput = {
         readonly archived?: number
       }
       readonly title?: string
+      readonly branch?: {
+        readonly directory: string
+        readonly repository: string
+        readonly name: string
+        readonly target: string
+        readonly commit: string
+        readonly start?: string
+      }
       readonly subpath?: string
       readonly metadata?: { readonly [x: string]: JsonValue }
       readonly permissions?: ReadonlyArray<{
@@ -3561,6 +3597,14 @@ export type SessionImportInput = {
         readonly archived?: number
       }
       readonly title?: string
+      readonly branch?: {
+        readonly directory: string
+        readonly repository: string
+        readonly name: string
+        readonly target: string
+        readonly commit: string
+        readonly start?: string
+      }
       readonly subpath?: string
       readonly metadata?: { readonly [x: string]: JsonValue }
       readonly permissions?: ReadonlyArray<{
@@ -3904,6 +3948,14 @@ export type SessionImportInput = {
         readonly archived?: number
       }
       readonly title?: string
+      readonly branch?: {
+        readonly directory: string
+        readonly repository: string
+        readonly name: string
+        readonly target: string
+        readonly commit: string
+        readonly start?: string
+      }
       readonly subpath?: string
       readonly metadata?: { readonly [x: string]: JsonValue }
       readonly permissions?: ReadonlyArray<{

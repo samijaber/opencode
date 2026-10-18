@@ -1,4 +1,5 @@
 import { Session } from "@opencode/core/session"
+import { SessionMerge } from "@opencode/core/session/merge"
 import { SessionStats } from "@opencode/core/session/stats"
 import { SessionTitle } from "@opencode/core/session/title"
 import { SessionTransfer } from "@opencode/core/session/transfer"
@@ -35,6 +36,7 @@ function missingForm(id: Form.ID) {
 export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handlers) =>
   Effect.gen(function* () {
     const session = yield* Session.Service
+    const merge = yield* SessionMerge.Service
     const transfer = yield* SessionTransfer.Service
     const requireOwnedForm = Effect.fnUntraced(function* (sessionID: Form.Info["sessionID"], formID: Form.ID) {
       const form = yield* Form.Service
@@ -58,6 +60,15 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
       )
 
     return handlers
+      .handle(
+        "session.merge",
+        Effect.fn(function* (ctx) {
+          const info = yield* session
+            .get(ctx.params.sessionID)
+            .pipe(Effect.catchTag("Session.NotFoundError", missingSession))
+          return { data: yield* merge.get(info) }
+        }),
+      )
       .handle(
         "session.list",
         Effect.fn(function* (ctx) {

@@ -25,6 +25,7 @@ import { SessionInbox } from "./session-inbox.js"
 import { Project } from "./project.js"
 import { SessionFork } from "./session-fork.js"
 import { Permission } from "./permission.js"
+import { SessionBranch } from "./session-branch.js"
 
 export const Source = Schema.Struct({
   start: NonNegativeInt,
@@ -107,6 +108,13 @@ export const Renamed = Event.durable({
   },
 })
 export type Renamed = typeof Renamed.Type
+
+export const BranchUpdated = Event.durable({
+  type: "session.branch.updated",
+  ...options,
+  schema: { ...Base, branch: SessionBranch.Info },
+})
+export type BranchUpdated = typeof BranchUpdated.Type
 
 export const MetadataUpdated = Event.durable({
   type: "session.metadata.updated",
@@ -655,6 +663,7 @@ export const Definitions = Event.inventory(
   ModelSelected,
   Moved,
   Renamed,
+  BranchUpdated,
   MetadataUpdated,
   Permissions,
   Viewed,

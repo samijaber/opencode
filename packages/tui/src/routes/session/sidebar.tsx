@@ -5,6 +5,7 @@ import { useConfig } from "../../config"
 import { Slot } from "../../plugin/render"
 import { withTimestampedFallback } from "@opencode/util/session-title-fallback"
 import { TextAttributes } from "@opentui/core"
+import { SessionMergeIndicator } from "../../component/session-merge"
 import "../../component/title-shimmer"
 
 import { getScrollAcceleration } from "../../util/scroll"
@@ -44,6 +45,7 @@ export function Sidebar(props: { sessionID: string }) {
                 : TextAttributes.BOLD
             }
           >
+            <SessionMergeIndicator sessionID={props.sessionID} />
             {withTimestampedFallback(session())}
           </title_shimmer>
         </box>

@@ -740,6 +740,10 @@ export function createData(config: CreateDataInput) {
         })
         return
       }
+      case "session.branch.updated":
+        if (store.session.info[event.data.sessionID])
+          setStore("session", "info", event.data.sessionID, "branch", event.data.branch)
+        return
       case "session.permissions":
         if (store.session.info[event.data.sessionID])
           setStore("session", "info", event.data.sessionID, "permissions", event.data.permissions)

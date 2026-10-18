@@ -18,6 +18,7 @@ import { useServer } from "@/runtime/server/current"
 import { showToast } from "@/shell/notifications/toast"
 import { getRelativeTime } from "@/shell/time"
 import { sessionLabel } from "@/session/title"
+import { SessionMergeIndicator } from "@/session/merge-indicator"
 import { pathKey } from "@/workspaces/path-key"
 import { worktreeInventoryKey } from "@/workspaces/inventory"
 import { SettingsList } from "@/settings/list"
@@ -522,7 +523,10 @@ export const SettingsWorkspaces: Component<{
                           <For each={linked()}>
                             {(session) => (
                               <div class="settings-workspaces-session">
-                                <span>{sessionLabel(session)}</span>
+                                <span>
+                                  <SessionMergeIndicator server={server.key} sessionID={session.id} />
+                                  {sessionLabel(session)}
+                                </span>
                                 <Show when={linked().length > 1 ? sessionTime(session) : undefined}>
                                   {(time) => <span class="settings-workspaces-session-time">{time()}</span>}
                                 </Show>

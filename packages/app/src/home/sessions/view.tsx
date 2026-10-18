@@ -14,6 +14,7 @@ import { useLanguage } from "@/runtime/i18n/language"
 import { ServerConnection } from "@/runtime/server/registry"
 import { SessionTabAvatarView } from "@/shell/layout/session-tab-avatar"
 import { sessionLabel } from "@/session/title"
+import { SessionMergeIndicator } from "@/session/merge-indicator"
 import { shouldOpenSessionInBackground } from "./open"
 import { createAltHold } from "./alt-hold"
 import "./view.css"
@@ -450,7 +451,13 @@ function HomeSessionSearchResultRow(
     >
       <HomeSessionLeadingController server={props.server} isOpenTab={props.isOpenTab} record={props.record} />
       <div data-slot="home-session-labels" class="flex min-w-0 flex-1 items-center gap-1.5">
-        <HomeSessionTitle title={title()} showProjectName={!!showProjectName()} search />
+        <HomeSessionTitle
+          server={props.server}
+          sessionID={props.record.session.id}
+          title={title()}
+          showProjectName={!!showProjectName()}
+          search
+        />
         <Show when={showProjectName()}>
           <HomeSessionProjectName name={props.record.projectName} trailing={props.desktop} search />
         </Show>
@@ -727,7 +734,12 @@ function HomeSessionRow(
             class="min-w-0 flex-1 items-center gap-1.5"
             classList={{ flex: props.desktop, contents: !props.desktop }}
           >
-            <HomeSessionTitle title={title()} showProjectName={!!showProjectName()} />
+            <HomeSessionTitle
+              server={props.server}
+              sessionID={props.record.session.id}
+              title={title()}
+              showProjectName={!!showProjectName()}
+            />
             <Show when={showProjectName()}>
               <HomeSessionProjectName name={props.record.projectName} trailing={props.desktop} />
             </Show>
@@ -817,7 +829,13 @@ function HomeSessionRow(
   )
 }
 
-function HomeSessionTitle(props: { title: string; showProjectName: boolean; search?: boolean }) {
+function HomeSessionTitle(props: {
+  server: ServerConnection.Key
+  sessionID: string
+  title: string
+  showProjectName: boolean
+  search?: boolean
+}) {
   return (
     <span
       data-component="home-session-title"
@@ -829,6 +847,7 @@ function HomeSessionTitle(props: { title: string; showProjectName: boolean; sear
         "flex-[1_1_auto]": !props.showProjectName,
       }}
     >
+      <SessionMergeIndicator server={props.server} sessionID={props.sessionID} />
       {props.title}
     </span>
   )

@@ -14,6 +14,7 @@ import type { BackgroundTask, MountedSession, SessionScreen } from "@opencode/gu
 import { ExtensionSlot } from "@/runtime/extension/render"
 import { useLanguage } from "@/runtime/i18n/language"
 import { useServer } from "@/runtime/server/current"
+import { SessionMergeIndicator } from "@/session/merge-indicator"
 import { useWorkspaceLocation } from "@/workspaces/location"
 import { Timeline } from "@opencode/session-ui/timeline/projection"
 import { createSessionTimelineRowRenderer } from "@opencode/session-ui/timeline/row"
@@ -492,6 +493,7 @@ function MessageTimelineView(
                           classList={{ "max-w-[45%] shrink-0": !!parentID() }}
                           onClick={openTitleEditor}
                         >
+                          <SessionMergeIndicator server={server.key} sessionID={sessionID()} />
                           {childTitle()}
                         </h1>
                       }

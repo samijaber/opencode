@@ -11,6 +11,7 @@ import { formatKeybindParts } from "@/shell/commands/command"
 import { useLanguage } from "@/runtime/i18n/language"
 import { useTabs } from "@/shell/tabs/tabs"
 import { SessionTabAvatar } from "@/shell/layout/session-tab-avatar"
+import { SessionMergeIndicator } from "@/session/merge-indicator"
 import { getRelativeTime } from "@/shell/time"
 import { createCommandPaletteFileEntry, createCommandPaletteModel, type CommandPaletteEntry } from "./palette"
 import { createCommandPaletteSearch } from "./search"
@@ -274,6 +275,9 @@ function PaletteRow(props: {
             </div>
             <div class="command-palette-row-text">
               <span class="command-palette-title" classList={{ "opacity-70": !!props.item.archived }}>
+                <Show when={props.item.server}>
+                  {(server) => <SessionMergeIndicator server={server()} sessionID={props.item.sessionID} />}
+                </Show>
                 {props.item.title}
               </span>
               <Show when={props.item.description}>

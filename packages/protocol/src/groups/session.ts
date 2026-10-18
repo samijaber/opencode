@@ -2,6 +2,7 @@ import { SessionMessage } from "@opencode/schema/session-message"
 import { SessionInbox } from "@opencode/schema/session-inbox"
 import { PromptInput } from "@opencode/schema/prompt-input"
 import { Session } from "@opencode/schema/session"
+import { SessionBranch } from "@opencode/schema/session-branch"
 import { SessionStats } from "@opencode/schema/session-stats"
 import { InstructionEntry } from "@opencode/schema/instruction-entry"
 import { Project } from "@opencode/schema/project"
@@ -178,6 +179,20 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S, FormI ext
   formLocationMiddleware: Context.Key<FormI, FormS>,
 ) =>
   HttpApiGroup.make("server.session")
+    .add(
+      HttpApiEndpoint.get("session.merge", "/api/session/:sessionID/merge", {
+        params: { sessionID: Session.ID },
+        success: Schema.Struct({ data: SessionBranch.Merge }),
+        error: SessionNotFoundError,
+      }).annotateMerge(
+        OpenApi.annotations({
+          identifier: "session.merge",
+          summary: "Session branch merge status",
+          description:
+            "Check the session's recorded feature branch against its repository default branch. Unknown status is never treated as merged. Works after the session's worktree has been removed.",
+        }),
+      ),
+    )
     .add(
       HttpApiEndpoint.get("session.list", "/api/session", {
         query: SessionsQuery,

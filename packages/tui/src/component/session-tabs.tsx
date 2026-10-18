@@ -52,6 +52,7 @@ import { Keymap } from "../context/keymap"
 import { registerOpencodeSpinner } from "./register-spinner"
 import { SPINNER_FRAMES } from "./spinner-frames"
 import { SessionTabsRailControls, SessionTabHalfRow } from "./session-tabs-rail"
+import { createSessionMerged, SessionMergeIndicator } from "./session-merge"
 import "./title-shimmer"
 
 registerOpencodeSpinner()
@@ -369,7 +370,12 @@ export function createTabMarquee(animations: () => boolean) {
   return { ...marquee, hovered, enter, leave, leaveHovered, reset }
 }
 
-function TabContextMenu(props: { state: TabContextMenuState; tabs: SessionTabsController; onClose: () => void }) {
+function TabContextMenu(props: {
+  state: TabContextMenuState
+  tabs: SessionTabsController
+  data?: ReturnType<typeof useData>
+  onClose: () => void
+}) {
   const dimensions = useTerminalDimensions()
   const theme = useTheme()
   const background = () => theme.background.raised.base
@@ -382,7 +388,7 @@ function TabContextMenu(props: { state: TabContextMenuState; tabs: SessionTabsCo
     mode: "menu",
     commands: [{ bind: "escape,ctrl+c", title: "Close tab menu", group: "Tabs", run: props.onClose }],
   }))
-  const actions = createMemo<Array<{ title: string; run?: () => void }>>(() => {
+  const actions = createMemo<Array<{ title: string; sessionID?: string; run?: () => void }>>(() => {
     const sessionID = props.state.sessionID
     const title = props.state.title
     const closed = (props.tabs.recentlyClosed?.() ?? []).slice(0, 10)
@@ -411,6 +417,7 @@ function TabContextMenu(props: { state: TabContextMenuState; tabs: SessionTabsCo
             { title: "Recently closed tabs" },
             ...closed.map((tab) => ({
               title: tab.title || "Untitled session",
+              sessionID: tab.sessionID,
               run: () => props.tabs.reopen?.(tab.sessionID),
             })),
             ...(closed.length === 0 ? [{ title: "No recently closed tabs" }] : []),
@@ -492,6 +499,9 @@ function TabContextMenu(props: { state: TabContextMenuState; tabs: SessionTabsCo
                 }}
               >
                 <text fg={action.run ? theme.text.base : theme.text.muted} selectable={false} truncate>
+                  <Show when={props.data && action.sessionID}>
+                    {(id) => <SessionMergeIndicator sessionID={id()} />}
+                  </Show>
                   {action.title}
                 </text>
               </box>
@@ -604,9 +614,7 @@ function VerticalSessionTabs(props: {
     return moveSessionTab(tabs.tabs(), pending.sessionID, pending.index)
   })
   const items = ordered
-  const highlightColor = createMemo(() =>
-    tint(background(), actionHovered(), actionHovered().a),
-  )
+  const highlightColor = createMemo(() => tint(background(), actionHovered(), actionHovered().a))
   const highlighted = (sessionID: string | undefined) =>
     sessionID !== undefined && (activeID() === sessionID || hovered() === sessionID || dragging() === sessionID)
   const addHighlighted = () => newTab() || addHovered()
@@ -751,7 +759,9 @@ function VerticalSessionTabs(props: {
               const restingTitleWidth = () => Math.max(1, width() - prefixWidth() - 1)
               const hoveredTitleWidth = () => Math.max(1, restingTitleWidth() - 1)
               const titleWidth = () => (hovered() === tab.sessionID ? hoveredTitleWidth() : restingTitleWidth())
-              const title = () => (props.controller ? undefined : session()?.title) ?? tab.title ?? "Untitled session"
+              const merged = createSessionMerged(() => tab.sessionID, data)
+              const title = () =>
+                `${merged() ? "✓ " : ""}${(props.controller ? undefined : session()?.title) ?? tab.title ?? "Untitled session"}`
               const scrolling = () => marquee.active() === tab.sessionID
               const visibleTitleParts = createMemo(() =>
                 scrolling()
@@ -858,10 +868,9 @@ function VerticalSessionTabs(props: {
               const separatorUpperColor = createMemo(() =>
                 tint(background(), previousGlowHue(), 0.1 * previousGlowLevel()),
               )
-              const separatorLowerColor = createMemo(() =>
-                tint(background(), glowHue(), 0.12 * glowLevel()),
-              )
+              const separatorLowerColor = createMemo(() => tint(background(), glowHue(), 0.12 * glowLevel()))
               const titleColor = (index: number, separator: boolean) => {
+                if (merged() && visibleTitleParts()[index]?.value === "✓") return theme.text.feedback.success.base
                 const level = titleGlow.value().level
                 const color =
                   level === 0
@@ -925,9 +934,7 @@ function VerticalSessionTabs(props: {
                         edge="top"
                         width={width()}
                         color={pulseBackground()}
-                        background={
-                          highlighted(items()[index() - 1]?.sessionID) ? highlightColor() : background()
-                        }
+                        background={highlighted(items()[index() - 1]?.sessionID) ? highlightColor() : background()}
                       />
                       <SessionTabHalfRow
                         top={1}
@@ -1074,7 +1081,7 @@ function VerticalSessionTabs(props: {
                           }
                         >
                           <Show
-                            when={scrolling() || titleGlow.value().level > 0 || titleFades()}
+                            when={merged() || scrolling() || titleGlow.value().level > 0 || titleFades()}
                             fallback={visibleTitle()}
                           >
                             <Index each={visibleTitleParts()}>
@@ -1279,7 +1286,9 @@ function VerticalSessionTabs(props: {
         )}
       </Show>
       <Show when={contextMenu()}>
-        {(state) => <TabContextMenu state={state()} tabs={tabs} onClose={() => setContextMenu(undefined)} />}
+        {(state) => (
+          <TabContextMenu state={state()} tabs={tabs} data={data} onClose={() => setContextMenu(undefined)} />
+        )}
       </Show>
     </box>
   )
@@ -1582,7 +1591,9 @@ function HorizontalSessionTabs(props: {
           const glowColor = createMemo(() => tint(background(), feedbackColor() ?? unreadColor(), glowLevel()))
           const glows = () =>
             Boolean(status().attention || (!selected() && !status().busy && status().unread !== undefined))
-          const title = () => data?.session.get(tab.sessionID)?.title ?? tab.title ?? "Untitled session"
+          const merged = createSessionMerged(() => tab.sessionID, data)
+          const title = () =>
+            `${merged() ? "✓ " : ""}${data?.session.get(tab.sessionID)?.title ?? tab.title ?? "Untitled session"}`
           const tabNumber = createMemo(() => items().findIndex((item) => item.sessionID === tab.sessionID) + 1)
           const numberWidth = () => Math.max(2, String(items().length).length)
           // Hovering reveals the close mark, so the title's right bound shifts left of it.
@@ -1615,6 +1626,7 @@ function HorizontalSessionTabs(props: {
           // Title characters sitting over the glow tinge toward its color, following the same
           // spatial falloff as the glow itself; characters beyond the tail stay neutral.
           const characterColor = (index: number, separator: boolean) => {
+            if (merged() && visibleTitleParts()[index]?.value === "✓") return theme.text.feedback.success.base
             const base = foreground()
             const color = glows() ? glowTextColor(base, glowColor(), 1 + numberWidth() + index, width()) : base
             const faded = titleFades()
@@ -1720,7 +1732,7 @@ function HorizontalSessionTabs(props: {
                   selectable={false}
                   attributes={status().renaming && !animations() ? TextAttributes.DIM : bold()}
                 >
-                  <Show when={scrolling() || glows() || titleFades()} fallback={visibleTitle()}>
+                  <Show when={merged() || scrolling() || glows() || titleFades()} fallback={visibleTitle()}>
                     <Index each={visibleTitleParts()}>
                       {(part, index) => (
                         <span style={{ fg: characterColor(index, part().separator) }}>{part().value}</span>
@@ -1796,7 +1808,9 @@ function HorizontalSessionTabs(props: {
         </text>
       </Show>
       <Show when={contextMenu()}>
-        {(state) => <TabContextMenu state={state()} tabs={tabs} onClose={() => setContextMenu(undefined)} />}
+        {(state) => (
+          <TabContextMenu state={state()} tabs={tabs} data={data} onClose={() => setContextMenu(undefined)} />
+        )}
       </Show>
     </box>
   )

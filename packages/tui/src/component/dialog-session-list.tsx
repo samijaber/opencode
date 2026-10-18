@@ -23,6 +23,7 @@ import { useConfig, useNewDesigns } from "../config"
 import { withTimestampedFallback } from "@opencode/util/session-title-fallback"
 import { projectName } from "../util/project"
 import { useLocation } from "../context/location"
+import { SessionMergeIndicator } from "./session-merge"
 
 export function DialogSessionList() {
   const dialog = useDialog()
@@ -167,6 +168,12 @@ export function DialogSessionList() {
           ? `Press ${shortcuts.get("session.delete")} again to confirm`
           : withTimestampedFallback(session),
         value: session.id,
+        titleView: deleting ? undefined : (
+          <>
+            <SessionMergeIndicator sessionID={session.id} />
+            {withTimestampedFallback(session)}
+          </>
+        ),
         category,
         footer,
         bg: deleting ? theme.background.action.destructive.focused : undefined,

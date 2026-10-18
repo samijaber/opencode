@@ -2,6 +2,8 @@ import { HoverCard } from "@kobalte/core/hover-card"
 import { createEffect, createSignal, onCleanup, Show, type JSXElement } from "solid-js"
 import { useLanguage } from "@/runtime/i18n/language"
 import { createMediaQuery } from "@solid-primitives/media"
+import { SessionMergeIndicator } from "@/session/merge-indicator"
+import type { ServerConnection } from "@/runtime/server/registry"
 import "./tab-popover.css"
 
 // Initial hover delay before the preview appears, per design.
@@ -19,6 +21,8 @@ let lastClosedAt = 0
 let activePreview: (() => void) | undefined
 
 export interface TabPreviewData {
+  server?: ServerConnection.Key
+  sessionID?: string
   projectName?: string
   title?: string
   path?: string
@@ -107,7 +111,12 @@ export function TabPreviewPopover(props: {
               <span data-slot="project">{props.data.projectName}</span>
             </Show>
             <Show when={props.data.title}>
-              <span data-slot="title">{props.data.title}</span>
+              <span data-slot="title">
+                <Show when={props.data.server}>
+                  {(server) => <SessionMergeIndicator server={server()} sessionID={props.data.sessionID} />}
+                </Show>
+                {props.data.title}
+              </span>
             </Show>
           </div>
 

@@ -16,6 +16,8 @@ import type {
   PluginCheckOutput,
   PluginUpdateInput,
   PluginUpdateOutput,
+  SessionMergeInput,
+  SessionMergeOutput,
   SessionListInput,
   SessionListOutput,
   SessionStatsInput,
@@ -536,6 +538,17 @@ export function make(options: ClientOptions) {
         ),
     },
     session: {
+      merge: (input: SessionMergeInput, requestOptions?: RequestOptions) =>
+        request<{ readonly data: SessionMergeOutput }>(
+          {
+            method: "GET",
+            path: `/api/session/${encodeURIComponent(input.sessionID)}/merge`,
+            successStatus: 200,
+            declaredStatuses: [400, 401, 404],
+            empty: false,
+          },
+          requestOptions,
+        ).then((value) => value.data),
       list: (input?: SessionListInput, requestOptions?: RequestOptions) =>
         request<SessionListOutput>(
           {

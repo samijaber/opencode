@@ -7,6 +7,38 @@ import { ServerFetch } from "../src/fetch"
 const SessionResponse = Schema.Struct({ data: Schema.toEncoded(Session.Info) })
 const SessionsResponse = Schema.Struct({ data: Schema.Array(Schema.toEncoded(Session.Info)) })
 
+it.live(
+  "reads merge status without initializing a missing session directory and returns not found for unknown sessions",
+  () =>
+    Effect.gen(function* () {
+      const handler = yield* ServerFetch.make({
+        app: { version: "test" },
+        database: { path: ":memory:" },
+        fs: { filewatcher: false },
+      })
+      const created = yield* Effect.promise(() =>
+        handler(
+          new Request("http://opencode.local/api/session", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ title: "Missing checkout", location: { directory: "/unavailable-merge-checkout" } }),
+          }),
+        ),
+      )
+      expect(created.status).toBe(200)
+      const session = Schema.decodeUnknownSync(SessionResponse)(yield* Effect.promise(() => created.json())).data
+      const status = yield* Effect.promise(() =>
+        handler(new Request(`http://opencode.local/api/session/${session.id}/merge`)),
+      )
+      expect(status.status).toBe(200)
+      expect(yield* Effect.promise(() => status.json())).toEqual({ data: { state: "unknown" } })
+      const missing = yield* Effect.promise(() =>
+        handler(new Request(`http://opencode.local/api/session/${Session.ID.create()}/merge`)),
+      )
+      expect(missing.status).toBe(404)
+    }).pipe(Effect.scoped),
+)
+
 it.live("creates a child at its parent's location and lists it under the parent", () =>
   Effect.gen(function* () {
     const handler = yield* ServerFetch.make({

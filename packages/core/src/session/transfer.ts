@@ -182,6 +182,7 @@ function sanitize(data: Data): Data {
     info: {
       ...data.info,
       title: data.info.title === undefined ? undefined : redact("session-title", data.info.id, data.info.title),
+      branch: undefined,
       metadata:
         data.info.metadata && Object.keys(data.info.metadata).length > 0
           ? { redacted: `session-metadata:${data.info.id}` }

@@ -22,6 +22,8 @@ import type {
   PluginCheckOutput,
   PluginUpdateInput,
   PluginUpdateOutput,
+  SessionMergeInput,
+  SessionMergeOutput,
   SessionListInput,
   SessionListOutput,
   SessionStatsInput,
@@ -370,6 +372,14 @@ const adaptGroupPlugin = (raw: RawClient["server.plugin"]) => ({
   check: EndpointPluginCheck(raw),
   update: EndpointPluginUpdate(raw),
 })
+
+const EndpointSessionMerge = (raw: RawClient["server.session"]) => (input: SessionMergeInput) =>
+  preserveEffect<SessionMergeOutput>()(
+    raw["session.merge"]({ params: { sessionID: input["sessionID"] } }).pipe(
+      Effect.mapError(mapClientError),
+      Effect.map((value) => value.data),
+    ),
+  )
 
 const EndpointSessionList = (raw: RawClient["server.session"]) => (input?: SessionListInput) =>
   preserveEffect<SessionListOutput>()(
@@ -773,6 +783,7 @@ const EndpointSessionView = (raw: RawClient["server.session"]) => (input: Sessio
   )
 
 const adaptGroupSession = (raw: RawClient["server.session"]) => ({
+  merge: EndpointSessionMerge(raw),
   list: EndpointSessionList(raw),
   stats: EndpointSessionStats(raw),
   create: EndpointSessionCreate(raw),

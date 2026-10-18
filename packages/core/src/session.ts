@@ -65,6 +65,7 @@ import { Job } from "./job.js"
 import type { Command } from "./command.js"
 import { SessionEnvironment } from "./session/environment.js"
 import { InstructionEntry } from "./session/instruction-entry.js"
+import { SessionMerge } from "./session/merge.js"
 
 // get project -> project.locations
 //
@@ -256,6 +257,7 @@ const layer = Layer.effect(
     const environments = yield* SessionEnvironment.Service
     const locations = yield* LocationServiceMap.Service
     const sessions = yield* Session.make()
+    const merge = yield* SessionMerge.Service
     const isDurableSessionEvent = Schema.is(SessionEvent.Durable)
 
     const result = Service.of({
@@ -314,6 +316,8 @@ const layer = Layer.effect(
           )
         if (projected.type === "existing") return projected.session
         // TODO: Restore recorded sessions onto replacement synchronized workspaces in a future API slice.
+        const created = yield* result.get(sessionID).pipe(Effect.orDie)
+        yield* merge.observe(created)
         return yield* result.get(sessionID).pipe(Effect.orDie)
       }),
       fork: Effect.fn("Session.fork")(function* (input) {
@@ -476,6 +480,7 @@ export const node: LayerNode.Provider<Service, never, typeof Node.tags.values.gl
   layer,
   deps: [
     Job.node,
+    SessionMerge.node,
     SessionEnvironment.node,
     Database.node,
     Bus.node,

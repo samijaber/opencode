@@ -14,6 +14,7 @@ import { useOpenSessionRoute } from "@/session/session-identity-header"
 import { errorMessage } from "@/shell/layout/helpers"
 import { showToast } from "@/shell/notifications/toast"
 import { SessionWorkingIndicator } from "./session-working-indicator"
+import { SessionMergeIndicator } from "@/session/merge-indicator"
 
 const neutral = "light-dark(var(--v2-text-text-base), #ffffff)"
 
@@ -202,6 +203,7 @@ export function SessionRunningMenu(props: {
                 class="flex h-7 max-w-full items-center gap-0.5 rounded-[6px] outline-none enabled:hover:bg-v2-overlay-simple-overlay-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-v2-border-border-focus data-[expanded]:bg-v2-overlay-simple-overlay-hover"
               >
                 <SessionWorkingIndicator sessionID={props.sessionID} />
+                <SessionMergeIndicator server={server.key} sessionID={props.sessionID} />
                 <span id={`${id}-title`} dir="auto" class="min-w-0 truncate px-1">
                   {props.title}
                 </span>

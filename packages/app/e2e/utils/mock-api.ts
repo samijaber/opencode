@@ -84,6 +84,7 @@ const Unsupported = MockUnsupported.pipe(HttpApiSchema.status(501))
 const PtyMissing = [MockNotFound.pipe(HttpApiSchema.status(404)), MockPtyNotFound.pipe(HttpApiSchema.status(404))]
 
 const Group = HttpApiGroup.make("mock")
+  .add(HttpApiEndpoint.get("sessionMerge", "/api/session/:sessionID/merge", { params: SessionParams, success: Json }))
   .add(HttpApiEndpoint.get("info", "/api/info", { success: Json }))
   .add(
     HttpApiEndpoint.get("event", "/api/event", {

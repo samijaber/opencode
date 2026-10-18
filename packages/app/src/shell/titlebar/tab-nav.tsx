@@ -15,6 +15,7 @@ import { SessionTabAvatarView } from "@/shell/layout/session-tab-avatar"
 import { SessionProgressIndicatorV2 } from "@opencode/session-ui/v2/session-progress-indicator-v2"
 import type { SessionInfo } from "@opencode/client/promise"
 import { sessionTabTitle } from "./tab-title"
+import { SessionMergeIndicator } from "@/session/merge-indicator"
 import { TabPreviewPopover } from "./tab-popover"
 import "./tab-nav.css"
 
@@ -315,6 +316,9 @@ export function TabNavItem(props: {
             <span data-slot="tab-avatar-unread-dot" aria-hidden="true" />
           </Show>
         </span>
+        <Show when={!editing()}>
+          <SessionMergeIndicator server={props.server} sessionID={props.session?.id} />
+        </Show>
         <span
           ref={(el) => {
             titleEl = el
@@ -398,6 +402,8 @@ export function TabNavItem(props: {
         }}
         data={{
           projectName: projectName(),
+          server: props.server,
+          sessionID: props.session?.id,
           title: props.session?.title,
           path: previewPath(),
           serverName: serverLabel(),

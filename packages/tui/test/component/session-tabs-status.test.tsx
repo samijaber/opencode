@@ -2,7 +2,7 @@
 import { testRender } from "@opentui/solid"
 import { MouseButton } from "@opentui/core"
 import { expect, test } from "bun:test"
-import { batch, createSignal } from "solid-js"
+import { batch, createEffect, createSignal } from "solid-js"
 import { ConfigProvider, useConfig, type Info } from "../../src/config"
 import {
   EMPTY_SESSION_TAB_STATUS,
@@ -12,7 +12,8 @@ import {
 } from "../../src/component/session-tabs"
 import { SPINNER_FRAMES } from "../../src/component/spinner-frames"
 import { ClientProvider } from "../../src/context/client"
-import { DataProvider } from "../../src/context/data"
+import { DataProvider, useData } from "../../src/context/data"
+import { SessionMergeIndicator } from "../../src/component/session-merge"
 import { LocationProvider } from "../../src/context/location"
 import { Keymap } from "../../src/context/keymap"
 import { RouteProvider } from "../../src/context/route"
@@ -23,9 +24,69 @@ import { ThemeProvider, useTheme } from "../../src/context/theme"
 import { DialogProvider } from "../../src/ui/dialog"
 import { ToastProvider } from "../../src/ui/toast"
 import { emptyThemeSource, tmpdir } from "../fixture/fixture"
-import { createApi, createEventStream, createFetch } from "../fixture/tui-client"
+import { createApi, createEventStream, createFetch, json } from "../fixture/tui-client"
 import { TestTuiContexts } from "../fixture/tui-environment"
 import { createTuiResolvedConfig } from "../fixture/tui-runtime"
+
+test("merged title checks share one request and render a check without changing the title text", async () => {
+  const ready = Promise.withResolvers<void>()
+  let requests = 0
+  const api = createApi(
+    createFetch((url) => {
+      if (url.pathname !== "/api/session/ses_merged/merge") return
+      requests += 1
+      return json({ data: { state: "merged", target: "main" } })
+    }).fetch,
+  )
+  function Titles() {
+    const data = useData()
+    createEffect(() => {
+      if (data.session.merge.get("ses_merged")?.state === "merged") ready.resolve()
+    })
+    return (
+      <box>
+        <text>
+          <SessionMergeIndicator sessionID="ses_merged" />
+          Merged task
+        </text>
+        <text>
+          <SessionMergeIndicator sessionID="ses_merged" />
+          Merged task
+        </text>
+      </box>
+    )
+  }
+  const settings: Info = { animations: false }
+  const app = await testRender(
+    () => (
+      <TestTuiContexts>
+        <TuiAppProvider value={{ name: "test", version: "test", channel: "test" }}>
+          <ConfigProvider
+            config={createTuiResolvedConfig(settings)}
+            service={{ get: async () => settings, update: async () => settings }}
+          >
+            <ClientProvider api={api}>
+              <DataProvider directory="/project">
+                <ThemeProvider mode="dark" source={emptyThemeSource}>
+                  <Titles />
+                </ThemeProvider>
+              </DataProvider>
+            </ClientProvider>
+          </ConfigProvider>
+        </TuiAppProvider>
+      </TestTuiContexts>
+    ),
+    { width: 50, height: 5 },
+  )
+  try {
+    await ready.promise
+    await app.renderOnce()
+    expect(app.captureCharFrame().match(/✓ Merged task/g)).toHaveLength(2)
+    expect(requests).toBe(1)
+  } finally {
+    app.renderer.destroy()
+  }
+})
 
 for (const orientation of ["horizontal", "vertical"] as const) {
   test(`${orientation} tabs replace ordinals with status without moving titles and keep context menu actions`, async () => {
@@ -248,7 +309,9 @@ for (const orientation of ["horizontal", "vertical"] as const) {
         ])
       }
       app.renderer.resize(60, 20)
-      setClosed(Array.from({ length: 11 }, (_, index) => ({ sessionID: `closed-${index}`, title: `History ${index + 1}` })))
+      setClosed(
+        Array.from({ length: 11 }, (_, index) => ({ sessionID: `closed-${index}`, title: `History ${index + 1}` })),
+      )
       await app.renderOnce()
       const historyRows = app.captureCharFrame().split("\n")
       const newRow = historyRows.findIndex((line) => line.includes("+ New session"))

@@ -12,6 +12,7 @@ import { Keymap } from "../../../context/keymap"
 import { useComposerTab } from "./context"
 import { withTimestampedFallback } from "@opencode/util/session-title-fallback"
 import { sessionFamily } from "../../../util/session"
+import { SessionMergeIndicator } from "../../../component/session-merge"
 
 interface SubagentEntry {
   sessionID: string
@@ -238,7 +239,8 @@ export function SubagentsTab(props: { sessionID: string }) {
                       wrapMode="none"
                     >
                       {entry.prefix}
-                      {entry.agent}: {entry.title}
+                      {entry.agent}: <SessionMergeIndicator sessionID={entry.sessionID} />
+                      {entry.title}
                     </text>
                   </box>
                   <Show when={status()}>

@@ -804,9 +804,10 @@ describe("Session.create", () => {
       const session = yield* Session.Service
       const parent = yield* session.create({ location })
 
-      expect(
-        yield* session.fork({ sessionID: parent.id }).pipe(Effect.flip),
-      ).toMatchObject({ _tag: "Session.ForkEmptyError", sessionID: parent.id })
+      expect(yield* session.fork({ sessionID: parent.id }).pipe(Effect.flip)).toMatchObject({
+        _tag: "Session.ForkEmptyError",
+        sessionID: parent.id,
+      })
     }),
   )
 
@@ -1445,7 +1446,18 @@ describe("SessionTransfer", () => {
       const exported = yield* transfer.export({ sessionID })
       expect(exported.info.time).toMatchObject({ idle: DateTime.makeUnsafe(200), viewed: DateTime.makeUnsafe(150) })
       expect(exported.messages).toEqual(messages)
+      yield* bus.publish(SessionEvent.BranchUpdated, {
+        sessionID,
+        branch: {
+          directory: AbsolutePath.make("/private/project"),
+          repository: AbsolutePath.make("/private/project/.git"),
+          name: "private-feature",
+          target: "main",
+          commit: "a".repeat(40),
+        },
+      })
       const sanitized = yield* transfer.export({ sessionID, sanitize: true })
+      expect(sanitized.info.branch).toBeUndefined()
       expect(sanitized.info.time).toMatchObject({ idle: DateTime.makeUnsafe(200), viewed: DateTime.makeUnsafe(150) })
       expect(sanitized.info.metadata).toEqual({ redacted: `session-metadata:${sessionID}` })
       expect(sanitized.messages).toMatchObject([
@@ -1465,7 +1477,7 @@ describe("SessionTransfer", () => {
         "compaction",
         "user",
       ])
-      expect(yield* Bus.latestSequence(db, sessionID)).toBe(4)
+      expect(yield* Bus.latestSequence(db, sessionID)).toBe(5)
     }),
   )
 

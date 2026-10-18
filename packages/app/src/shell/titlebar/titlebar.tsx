@@ -26,6 +26,7 @@ import "./titlebar.css"
 import { TitlebarRightMount } from "@/shell/titlebar/right-slot"
 import { MobileDrawer, MobileDrawerContent, MobileDrawerLabel, MobileDrawerTrigger } from "@/shell/mobile-drawer"
 import { sessionTabTitle } from "./tab-title"
+import { SessionMergeIndicator } from "@/session/merge-indicator"
 import { SessionTabAvatar } from "@/shell/layout/session-tab-avatar"
 import { SessionProgressIndicatorV2 } from "@opencode/session-ui/v2/session-progress-indicator-v2"
 import { RecentlyClosedTabsMenu } from "./recently-closed-tabs-menu"
@@ -596,6 +597,9 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
                               </Show>
                             </span>
                           )}
+                        </Show>
+                        <Show when={currentTab()}>
+                          {(tab) => <SessionMergeIndicator server={tab().server} sessionID={session()?.id} />}
                         </Show>
                         <span data-slot="mobile-tab-title" dir="auto" class="min-w-0 flex-1 truncate text-start">
                           {currentTitle()}

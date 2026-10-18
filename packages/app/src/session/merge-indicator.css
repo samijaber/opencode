@@ -1,0 +1,11 @@
+.session-merge-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  vertical-align: text-bottom;
+  margin-inline-end: 4px;
+  color: light-dark(var(--v2-purple-700), var(--v2-purple-400));
+}

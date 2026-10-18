@@ -24,6 +24,64 @@ const c = { id: "ses_tab_c", title: "Tab C session" }
 
 test.use({ serviceWorkers: "block" })
 
+test("merged branch badges are shared across titles and mobile tabs without changing the session name", async ({
+  page,
+}) => {
+  const checks: Record<string, number> = {}
+  await mockWorkspace(page, {
+    name: "Tabs",
+    sessions: [a, b, c],
+    sessionMerge: (sessionID) => {
+      checks[sessionID] = (checks[sessionID] ?? 0) + 1
+      return { state: sessionID === a.id ? "merged" : sessionID === b.id ? "unmerged" : "unknown", target: "main" }
+    },
+  })
+  await page.goto(sessionHref(a.id))
+  const tab = page.locator(`[data-titlebar-tab-slot]:has(a[href="${sessionHref(a.id)}"])`)
+  await expect(tab.getByRole("img", { name: "Merged into main", exact: true })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: a.title, exact: false }).getByRole("img", { name: "Merged into main" }),
+  ).toBeVisible()
+  await expect.poll(() => checks[b.id]).toBe(1)
+  await expect.poll(() => checks[c.id]).toBe(1)
+  await expect(
+    page.locator(`[data-titlebar-tab-slot]:has(a[href="${sessionHref(b.id)}"])`).getByRole("img"),
+  ).toHaveCount(0)
+  await expect(
+    page.locator(`[data-titlebar-tab-slot]:has(a[href="${sessionHref(c.id)}"])`).getByRole("img"),
+  ).toHaveCount(0)
+  expect(checks[a.id]).toBe(1)
+
+  const title = tab.locator("[data-titlebar-tab-title]")
+  await title.dblclick()
+  await expect(title).toHaveAttribute("contenteditable", "true")
+  await expect(title).toHaveText(a.title)
+  await title.fill("Renamed merged session")
+  await title.press("Enter")
+  await expect(page.getByRole("heading", { name: "Renamed merged session", exact: false })).toBeVisible()
+  await expect(tab.getByRole("img", { name: "Merged into main" })).toBeVisible()
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.locator("html").evaluate((element) => element.setAttribute("dir", "rtl"))
+  await page.getByRole("button", { name: "Tabs", exact: true }).click()
+  const drawer = page.locator('[data-slot="mobile-tabs-drawer"]')
+  const mobileTab = drawer.locator(`[data-titlebar-tab-slot]:has(a[href="${sessionHref(a.id)}"])`)
+  await expect(mobileTab.getByRole("img", { name: "Merged into main" })).toBeVisible()
+  await expect(mobileTab.locator("[data-titlebar-tab-title]")).toHaveText("Renamed merged session")
+  await expect(
+    drawer.locator(`[data-titlebar-tab-slot]:has(a[href="${sessionHref(b.id)}"])`).getByRole("img"),
+  ).toHaveCount(0)
+  await expect(mobileTab.getByRole("button", { name: "Close tab", exact: true })).toBeVisible()
+  await drawer.getByRole("button", { name: "Home", exact: true }).click()
+  const homeRow = page.locator('[data-component="home-session-row"]').filter({ hasText: "Renamed merged session" })
+  await expect(homeRow.getByRole("img", { name: "Merged into main" })).toBeVisible()
+  await expect(homeRow.locator('[data-component="home-session-title"]')).toHaveText("Renamed merged session")
+  await page.getByRole("textbox", { name: /Search sessions/ }).fill("Renamed merged session")
+  await expect(
+    page.locator('[data-component="home-session-search-row"]').getByRole("img", { name: "Merged into main" }),
+  ).toBeVisible()
+})
+
 test("tab strip keeps draft tabs as wide as session tabs and navigates on mouse down", async ({ page }) => {
   const workspace = await mockWorkspace(page, {
     name: "Tabs",

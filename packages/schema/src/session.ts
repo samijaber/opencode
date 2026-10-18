@@ -14,6 +14,7 @@ import { Permission } from "./permission.js"
 import { TokenUsage } from "./token-usage.js"
 import { Revert } from "./session-revert.js"
 import { SessionFork } from "./session-fork.js"
+import { SessionBranch } from "./session-branch.js"
 
 export const ID = SessionID
 export type ID = SessionID
@@ -50,6 +51,7 @@ export const Info = Schema.Struct({
     archived: DateTimeUtcFromMillis.pipe(optional),
   }),
   title: Schema.String.pipe(optional),
+  branch: SessionBranch.Info.pipe(optional),
   location: Location.Ref,
   subpath: RelativePath.pipe(optional),
   metadata: Metadata.pipe(optional),

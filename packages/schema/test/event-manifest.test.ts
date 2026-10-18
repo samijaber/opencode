@@ -108,6 +108,7 @@ describe("public event manifest", () => {
         "session.model.selected.1",
         "session.moved.1",
         "session.renamed.1",
+        "session.branch.updated.1",
         "session.metadata.updated.1",
         "session.permissions.1",
         "session.viewed.1",
@@ -162,6 +163,7 @@ describe("public event manifest", () => {
     expect(EventManifest.ServerDefinitions).not.toContain(SessionEvent.UsageRecorded)
     expect(EventManifest.Latest.has("session.usage.recorded")).toBe(false)
     expect(SessionEvent.UsageUpdated.durability).toBe("ephemeral")
+    expect(EventManifest.Server.get("session.branch.updated")).toBe(SessionEvent.BranchUpdated)
     expect(SessionEvent.Compaction.Delta.durability).toBe("ephemeral")
     expect(SessionEvent.Tool.Progress.durability).toBe("ephemeral")
     expect(EventManifest.Server.get("session.tool.progress")).toBe(SessionEvent.Tool.Progress)

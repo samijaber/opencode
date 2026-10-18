@@ -26,6 +26,7 @@ import { isProjectDirectory, isWorkspaceDirectory } from "@/workspaces/paths"
 import { sessionHref } from "@/shell/routes/session"
 import { showToast } from "@/shell/notifications/toast"
 import { sessionTitle } from "./title"
+import { SessionMergeIndicator } from "./merge-indicator"
 import { SessionWorkingIndicator } from "./header/session-working-indicator"
 import "./session-identity-header.css"
 
@@ -258,6 +259,7 @@ export function SessionAncestorTrail(props: {
                 classList={{ "ps-1": index() === 0, "ps-2": index() > 0 }}
                 onClick={() => open(props.sessionID, ancestor.id)}
               >
+                <SessionMergeIndicator server={server.key} sessionID={ancestor.id} />
                 <bdi dir="auto">{ancestor.title}</bdi>
               </button>
               <Show when={index() < ancestors().length - 1}>
@@ -407,6 +409,7 @@ export function SessionIdentityHeader(props: ParentProps<{ sessionID: string; se
                     class="w-fit truncate rounded-[6px] px-1 py-1 text-[13px] font-[530] leading-4 tracking-[-0.04px] text-v2-text-text-base"
                     classList={{ "max-w-[45%] shrink-0": !!parentID() }}
                   >
+                    <SessionMergeIndicator server={server.key} sessionID={props.sessionID} />
                     {value()}
                   </h1>
                 )}

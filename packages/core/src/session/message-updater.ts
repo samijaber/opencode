@@ -80,6 +80,7 @@ export function update(adapter: Adapter, event: SessionEvent.DurableEvent) {
     Match.type<SessionEvent.DurableEvent>(),
     Match.discriminatorsExhaustive("type")({
       "session.created": () => Effect.void,
+      "session.branch.updated": () => Effect.void,
       "session.viewed": () => Effect.void,
       "session.message.content.updated": (event) =>
         updateOwnedAssistant(event.data.messageID, (draft) => {

@@ -12,6 +12,7 @@ import type { Workspace } from "@opencode/schema/workspace"
 import { Timestamps } from "../database/schema.sql.js"
 import type { Instruction } from "@opencode/schema/instruction"
 import type { Session } from "@opencode/schema/session"
+import type { SessionBranch } from "@opencode/schema/session-branch"
 import type { CompactionPayload, MovePayload, SyntheticPayload, UserPayload } from "@opencode/schema/session-inbox"
 import type { RevertV1 } from "@opencode/schema/session-revert"
 import type { Schema } from "effect"
@@ -35,6 +36,7 @@ export const SessionTable = sqliteTable(
     directory: directoryColumn().notNull(),
     path: pathColumn(),
     title: text(),
+    branch: text({ mode: "json" }).$type<SessionBranch.Info>(),
     version: text().notNull(),
     share_url: text(),
     summary_additions: integer(),

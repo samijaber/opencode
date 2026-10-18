@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test"
 import type { OpenCodeEvent, SessionMessageInfo } from "@opencode/client/promise"
 import { Permission } from "@opencode/schema/permission"
 import { Worktree } from "@opencode/schema/worktree"
+import type { SessionBranch } from "@opencode/schema/session-branch"
 import { Duration, Effect, Layer, Option, Predicate, Schema } from "effect"
 import { HttpRouter, HttpServer, HttpServerResponse } from "effect/http"
 import { HttpApiBuilder, HttpApiSchema } from "effect/http-api"
@@ -67,6 +68,7 @@ export interface MockServerConfig {
   // Replaces the `/api/project` inventory, which defaults to `[project]`.
   projects?: Resolvable<unknown[]>
   sessions: MockSession[]
+  sessionMerge?: (sessionID: string) => SessionBranch.Merge
   pageMessages: (
     sessionId: string,
     limit: number,
@@ -1211,6 +1213,8 @@ function mockHandlers(
               ),
             ),
           }),
+        sessionMerge: (ctx) =>
+          Effect.sync(() => ({ data: config.sessionMerge?.(ctx.params.sessionID) ?? { state: "unknown" } })),
         sessionGet: (ctx) =>
           Effect.suspend(() => {
             config.onSession?.(ctx.params.sessionID)
