@@ -45,6 +45,7 @@ export async function setupActivity(page: Page, attention = false) {
   const fixture = await setupTimeline(page, {
     viewport: { width: 390, height: 844 },
     sessions,
+    sessionMerge: (id) => ({ state: id === nested.id ? "merged" : "unknown", target: "main" }),
     sessionStatus: status,
     sessionMessages: [
       { id: "msg_activity_root", type: "user", text: "Review the synthetic fixture", time: { created: 1 } },

@@ -12,7 +12,7 @@ The OpenCode backend and Flow gateway keep running independently. Deploying this
 
 ## Update
 
-Use Bun 1.4.2. On this Mac it is installed through the Node 24.12.0 asdf toolchain; prefix commands with `ASDF_NODEJS_VERSION=24.12.0` if necessary.
+Use Bun 1.4.2 through mise; prefix local commands with `mise exec bun@1.4.2 --` when Bun is not on the shell's PATH.
 
 ```sh
 git fetch origin dev:refs/remotes/origin/dev
@@ -29,6 +29,12 @@ bun run deploy
 ```
 
 Deploy from a clean, committed checkout. `deploy` records the commit in the `x-opencode-ui-revision` response header. Push verified changes to the fork's `session-activity` branch. After dependency/config changes, regenerate binding types with `bun run types`.
+
+### Merged-session indicators
+
+Session titles use a purple merge icon when their recorded feature-branch tip is confirmed merged into the repository's default branch (a green check in the terminal UI). Checks use local Git ancestry and authenticated GitHub PR evidence, including squash/rebase merges, with server-side caching. New commits clear the marker; unknown status is never rendered as merged. Existing sessions can be backfilled while their isolated worktree still exists. Already-removed, never-recorded worktrees remain unknown.
+
+This feature also requires the matching backend, including the additive `session_branch` migration and `/api/session/:sessionID/merge` endpoint. Back up the live SQLite database before upgrading it. For a user-authorized backend replacement, use the SDK's `Service.stop({ pty: "handoff" })` followed by `Service.ensure(...)` so persistent terminals are handed over; the CLI's explicit `service restart` shuts them down instead. Do not restart the backend for frontend-only deployments.
 
 For session/timeline changes, run the production cold-entry benchmark before and after (serially):
 

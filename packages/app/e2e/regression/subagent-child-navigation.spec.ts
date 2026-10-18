@@ -45,6 +45,9 @@ test("mobile activity lists nested work and opens command output and child conve
   const drawer = page.getByRole("dialog", { name: "Session activity", exact: true })
   const running = drawer.getByRole("region", { name: "Running", exact: true })
   await expect(running.getByRole("listitem")).toHaveCount(3)
+  await expect(
+    running.getByRole("button", { name: /Check migrations/ }).getByRole("img", { name: "Merged into main" }),
+  ).toBeVisible()
   const command = running.getByRole("button", { name: /pnpm test:integration/ })
   await expect(command).toBeVisible()
   // A long, multiline command must remain a compact two-line task row on a phone.

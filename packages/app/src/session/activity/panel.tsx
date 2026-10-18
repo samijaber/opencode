@@ -2,7 +2,8 @@ import { createEffect, createMemo, createUniqueId, For, on, onCleanup, Show } fr
 import { createStore } from "solid-js/store"
 import { Icon } from "@opencode/ui/icon"
 import { useLanguage } from "@/runtime/i18n/language"
-import { useData } from "@/runtime/server/current"
+import { useData, useServer } from "@/runtime/server/current"
+import { SessionMergeIndicator } from "../merge-indicator"
 import { useServerSDK } from "@/runtime/server/client"
 import { MobilePanelDrawer } from "@/shell/mobile-panel-drawer"
 import { showToast } from "@/shell/notifications/toast"
@@ -15,6 +16,7 @@ import "./panel.css"
 
 export function SessionActivityPanel(props: { sessionID: string }) {
   const data = useData()
+  const server = useServer()
   const sdk = useServerSDK()
   const language = useLanguage()
   const openRoute = useOpenSessionRoute()
@@ -171,11 +173,17 @@ export function SessionActivityPanel(props: { sessionID: string }) {
               <Icon name={item.type === "shell" ? "console" : "branch"} />
               <span class="session-activity-details">
                 <bdi class="session-activity-label" dir={item.type === "shell" ? "ltr" : "auto"} title={item.label}>
+                  <Show when={item.type === "session"}>
+                    <SessionMergeIndicator server={server.key} sessionID={item.sessionID} />
+                  </Show>
                   {item.label}
                 </bdi>
                 <Show when={item.parentID && item.parentID !== props.sessionID}>
                   <span class="session-activity-parent">
-                    <bdi>{data.session.get(item.parentID!)?.title ?? item.parentID}</bdi>
+                    <bdi>
+                      <SessionMergeIndicator server={server.key} sessionID={item.parentID} />
+                      {data.session.get(item.parentID!)?.title ?? item.parentID}
+                    </bdi>
                   </span>
                 </Show>
                 <span class="session-activity-meta">
