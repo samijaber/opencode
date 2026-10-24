@@ -32,6 +32,7 @@
 /* Keep the strip mounted for tab shortcuts and session metadata while collapsed. */
 [data-slot="mobile-tabs-drawer"] {
   display: flex;
+  flex: 1;
   min-height: 0;
   flex-direction: column;
   gap: 8px;
@@ -41,7 +42,17 @@
 [data-slot="mobile-tabs-drawer-list"] {
   display: flex;
   min-height: 0;
+  max-height: min(20dvh, 144px);
+  flex-shrink: 0;
   flex-direction: column;
+}
+
+[data-slot="mobile-tabs-drawer"] nav {
+  overscroll-behavior: contain;
+}
+
+[data-slot="mobile-tabs-drawer"] nav a {
+  min-height: 44px;
 }
 
 [data-slot="mobile-tabs-drawer"] [data-slot="vertical-tabs"] {

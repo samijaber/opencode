@@ -611,6 +611,9 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
                         <MobileDrawerLabel class="sr-only">{language.t("titlebar.tabs")}</MobileDrawerLabel>
                         <div data-slot="mobile-tabs-drawer" data-corvu-no-drag>
                           <div data-slot="mobile-tabs-drawer-list">
+                            <h2 class="px-2 py-1 text-11-medium text-v2-text-text-muted">
+                              {language.t("sidebar.openTabs")}
+                            </h2>
                             <TitlebarTabStrip
                               orientation="vertical"
                               tabs={tabsStore}
@@ -627,6 +630,9 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
                               onReorder={(keys) => tabsStoreActions.reorder(keys)}
                             />
                           </div>
+                          <Show when={mobileTabs.open}>
+                            <RecentSessions currentTab={currentTab()} onNavigate={() => setMobileTabs("open", false)} />
+                          </Show>
                           <button
                             type="button"
                             data-action="mobile-tabs-new-session"

@@ -13,7 +13,7 @@ import { SessionTabAvatar } from "@/shell/layout/session-tab-avatar"
 import { sessionHref } from "@/shell/routes/session"
 import { sessionTitle } from "@/session/title"
 
-export function RecentSessions(props: { currentTab?: Tab }) {
+export function RecentSessions(props: { currentTab?: Tab; onNavigate?: () => void }) {
   const global = useGlobal()
   const servers = useServers()
   const layout = useLayout()
@@ -87,11 +87,12 @@ export function RecentSessions(props: { currentTab?: Tab }) {
                       ctx.data.session.remember(record().session)
                       ctx.projects.open(record().project.worktree)
                       ctx.projects.touch(record().project.worktree)
-                      void startTransition(() =>
+                      void startTransition(() => {
                         tabs.select(
                           tabs.addSessionTab({ server: ServerConnection.key(conn), sessionId: record().session.id }),
-                        ),
-                      )
+                        )
+                        props.onNavigate?.()
+                      })
                     }}
                   >
                     <SessionTabAvatar

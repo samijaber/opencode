@@ -34,7 +34,16 @@ test("sidebar recent sessions use Home's date groups and include sessions withou
       { id: "ses_recent_yesterday", title: "Yesterday's conversation", created: new Date(2026, 9, 23, 23).getTime() },
       { id: "ses_recent_older", title: "Older conversation", created: new Date(2026, 8, 30, 12).getTime() },
     ],
-    seed: { tabs: ["ses_recent_today"], settings: { appearance: { tabLayout: "vertical" } } },
+    seed: {
+      tabs: [
+        "ses_recent_today",
+        ...Array.from({ length: 20 }, (_, index) => ({
+          draft: `draft_recent_${index}`,
+          directory: "C:/OpenCode/Recent",
+        })),
+      ],
+      settings: { appearance: { tabLayout: "vertical" } },
+    },
   })
   await page.goto(sessionHref("ses_recent_today"))
   const sidebar = page.locator('[data-slot="vertical-tabs-sidebar"]')
@@ -60,6 +69,16 @@ test("sidebar recent sessions use Home's date groups and include sessions withou
   await sidebar.locator('[data-action="vertical-tabs-home"]').click()
   const home = page.getByRole("region", { name: "Recent sessions", exact: true })
   await expect(home.getByRole("heading")).toHaveText(["Today", "Yesterday", "Older"])
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByRole("button", { name: "Tabs", exact: true }).click()
+  const drawer = page.getByRole("dialog", { name: "Tabs", exact: true })
+  const mobileRecent = drawer.getByRole("navigation", { name: "Recent sessions", exact: true })
+  await expect(mobileRecent.getByRole("heading")).toHaveText(["Today", "Yesterday", "Older"])
+  await expect(drawer.getByRole("button", { name: "Home", exact: true })).toBeInViewport()
+  await mobileRecent.getByRole("link", { name: "Older conversation", exact: true }).click()
+  await expectPath(page, sessionHref("ses_recent_older"))
+  await expectSessionTitle(page, "Older conversation")
+  await expect(drawer).toBeHidden()
 })
 
 test("merged branch badges are shared across titles and mobile tabs without changing the session name", async ({
