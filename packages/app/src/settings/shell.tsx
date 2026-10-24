@@ -142,7 +142,7 @@ export function SettingsScreen() {
     const context = global.ensureServerCtx(server)
 
     const value =
-      context.projects.list().find((item) => item.worktree === directory) ??
+      context.projects.available().find((item) => item.worktree === directory) ??
       context.sync.data.project.find((item) => item.worktree === directory)
 
     return value ? { expanded: false, ...value } : undefined

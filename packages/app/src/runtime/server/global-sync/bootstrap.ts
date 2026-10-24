@@ -72,7 +72,7 @@ export const loadProjectsQuery = (scope: ServerScope, projects: ProjectApi) =>
           items
             .filter((project) => !!project?.id)
             .map(normalizeProjectInfo)
-            .filter((p) => !!p.worktree && !p.worktree.includes("opencode-test"))
+            .filter((p) => !!p.worktree)
             .sort((a, b) => cmp(a.id, b.id)),
         ),
       ),

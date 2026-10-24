@@ -154,7 +154,7 @@ describe("query keys", () => {
             })),
             { id: "b", canonical: "/b", time: { created: 1, updated: 1 }, sandboxes: [] },
             { id: "a", canonical: "/a", time: { created: 1, updated: 1 }, sandboxes: ["/a/legacy"] },
-            { id: "test", canonical: "/tmp/opencode-test-1", time: { created: 1, updated: 1 }, sandboxes: [] },
+            { id: "test", canonical: "/projects/opencode-tests", time: { created: 1, updated: 1 }, sandboxes: [] },
           ])
         },
         { preconnect() {} },
@@ -164,11 +164,11 @@ describe("query keys", () => {
     const result = await new QueryClient().fetchQuery(loadProjectsQuery(ServerScope.local, api.project))
 
     expect(requests).toEqual(["/api/project"])
-    expect(result).toHaveLength(302)
+    expect(result).toHaveLength(303)
     expect(result.slice(0, 2)).toMatchObject([
       { id: "a", worktree: "/a", sandboxes: ["/a/legacy"], worktrees: [{ directory: "/a" }] },
       { id: "b", worktree: "/b", sandboxes: [], worktrees: [{ directory: "/b" }] },
     ])
-    expect(result.some((project) => project.id === "test")).toBe(false)
+    expect(result.find((project) => project.id === "test")?.worktree).toBe("/projects/opencode-tests")
   })
 })

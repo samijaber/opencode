@@ -15,6 +15,7 @@ import { useSettings } from "@/settings/model"
 import { WindowsAppMenu } from "./windows-menu"
 import { applyPath, backPath, forwardPath, type HistoryLocation } from "./history"
 import { TitlebarTabStrip } from "@/shell/titlebar/tab-strip"
+import { RecentSessions } from "./recent-sessions"
 import { makeEventListener } from "@solid-primitives/event-listener"
 import { createMediaQuery } from "@solid-primitives/media"
 import { readSessionTabsRemovedDetail, SESSION_TABS_REMOVED_EVENT } from "@/shell/titlebar/session-events"
@@ -736,7 +737,10 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
                               keybind={command.keybind("tab.new")}
                             />
                             <div class="h-4 w-full shrink-0" aria-hidden="true" />
-                            <div class="flex min-h-0 flex-1 flex-col gap-1">
+                            <div class="flex min-h-0 max-h-[35%] shrink-0 flex-col gap-1">
+                              <h2 class="px-2 py-1 text-11-medium text-v2-text-text-muted">
+                                {language.t("sidebar.openTabs")}
+                              </h2>
                               <TitlebarTabStrip
                                 orientation="vertical"
                                 tabs={tabsStore}
@@ -753,6 +757,7 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
                                 onReorder={(keys) => tabsStoreActions.reorder(keys)}
                               />
                             </div>
+                            <RecentSessions currentTab={currentTab()} />
                             <Show when={titlebarItems.ids().length > 0}>
                               <div data-slot="vertical-tabs-footer" class="mt-2 flex w-full shrink-0 flex-col">
                                 <TitlebarItems items={titlebarItems} vertical />

@@ -24,6 +24,44 @@ const c = { id: "ses_tab_c", title: "Tab C session" }
 
 test.use({ serviceWorkers: "block" })
 
+test("sidebar recent sessions use Home's date groups and include sessions without open tabs", async ({ page }) => {
+  const today = new Date(2026, 9, 24, 12).getTime()
+  await page.clock.setFixedTime(today)
+  await mockWorkspace(page, {
+    name: "Recent",
+    sessions: [
+      { id: "ses_recent_today", title: "Today's conversation", created: today },
+      { id: "ses_recent_yesterday", title: "Yesterday's conversation", created: new Date(2026, 9, 23, 23).getTime() },
+      { id: "ses_recent_older", title: "Older conversation", created: new Date(2026, 8, 30, 12).getTime() },
+    ],
+    seed: { tabs: ["ses_recent_today"], settings: { appearance: { tabLayout: "vertical" } } },
+  })
+  await page.goto(sessionHref("ses_recent_today"))
+  const sidebar = page.locator('[data-slot="vertical-tabs-sidebar"]')
+  const recent = sidebar.getByRole("navigation", { name: "Recent sessions", exact: true })
+  await expect(recent.getByRole("heading")).toHaveText(["Today", "Yesterday", "Older"])
+  await expect(recent.getByRole("region", { name: "Today", exact: true }).getByRole("link")).toHaveAccessibleName(
+    "Today's conversation",
+  )
+  await expect(recent.getByRole("region", { name: "Yesterday", exact: true }).getByRole("link")).toHaveAccessibleName(
+    "Yesterday's conversation",
+  )
+  await expect(recent.getByRole("region", { name: "Older", exact: true }).getByRole("link")).toHaveAccessibleName(
+    "Older conversation",
+  )
+  await page.locator("html").evaluate((element) => element.setAttribute("dir", "rtl"))
+  await recent.getByRole("link", { name: "Yesterday's conversation", exact: true }).click()
+  await expectPath(page, sessionHref("ses_recent_yesterday"))
+  await expectSessionTitle(page, "Yesterday's conversation")
+  await expect(recent.getByRole("link", { name: "Yesterday's conversation", exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  )
+  await sidebar.locator('[data-action="vertical-tabs-home"]').click()
+  const home = page.getByRole("region", { name: "Recent sessions", exact: true })
+  await expect(home.getByRole("heading")).toHaveText(["Today", "Yesterday", "Older"])
+})
+
 test("merged branch badges are shared across titles and mobile tabs without changing the session name", async ({
   page,
 }) => {

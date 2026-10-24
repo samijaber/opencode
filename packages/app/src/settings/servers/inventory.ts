@@ -2,17 +2,9 @@ import { createMemo } from "solid-js"
 import { ServerConnection, serverName, useServers } from "@/runtime/server/registry"
 import { useExtensionServers, type ExtensionServer } from "@/runtime/extension/servers"
 import type { ServerCtx } from "@/runtime/server/runtime"
-import { projectInventory } from "@/workspaces/project-inventory"
 
-export function settingsProjects(context: {
-  projects: Pick<ServerCtx["projects"], "list" | "closed">
-  sync: { data: Pick<ServerCtx["sync"]["data"], "project"> }
-}) {
-  return projectInventory(
-    context.projects.list(),
-    context.sync.data.project.map((project) => ({ ...project, expanded: false })),
-    context.projects.closed(),
-  )
+export function settingsProjects(context: { projects: Pick<ServerCtx["projects"], "available"> }) {
+  return context.projects.available()
 }
 
 export type SettingsServer = {

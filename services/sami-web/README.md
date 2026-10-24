@@ -6,6 +6,8 @@ Running work has a distinct bordered section with a count. Task titles and paren
 
 Home and the new-session project picker include known server projects, not just folders opened in this browser. The inventory matches Settings and respects explicitly closed projects. **All projects** resets the Home filter on desktop and in the mobile project dropdown; session search then spans projects. Project filters include sessions from worktrees whose inventories have not loaded yet.
 
+The vertical sidebar keeps open tabs above a recent-session list grouped into **Today**, **Yesterday**, and **Older**, using the same cached index, live updates, ordering, and date-group rules as Home. Recent sessions include conversations without open tabs. Home, Settings, the composer project picker, and session palettes use the shared server project inventory. Discovery no longer excludes repositories just because their path contains `opencode-test`. These changes live in `packages/app`, which both the web and Electron desktop renderers build; a web deployment does not update an installed desktop app.
+
 ## Hosting
 
 `opencode-sami-web` serves `packages/app/dist` on the Worker **route** `opencode.samijaber.com/*`. API requests, uploads and WebSockets pass through to the existing tunnel and authenticated local gateway. SSE responses are streamed. The existing Cloudflare Access application protects the hostname; workers.dev and preview URLs are disabled. The Worker stores no server password.
@@ -61,6 +63,8 @@ To roll back only the custom frontend, run `bunx wrangler deployments list`, the
 - A session's elapsed time is its age from creation, not a precise measurement of active execution time.
 
 ## Verification
+
+The sidebar/project-inventory revision passes the full repository check, 21 focused unit tests, and 32 Home/tab keeper cases. Three unrelated keeper failures reproduce on the unchanged base: the Home shortcut, side-tab shortcuts (macOS modifier mismatch), and the inactive-tab transcript request count. The new sidebar regression fails on the previous production build and passes ten five-worker repetitions, including English in RTL. Web and Electron production builds compile. Three-sample cold-entry stable-render medians are **428.3 ms before** and **437.5 ms after**; these small local samples are not a performance guarantee. Verification did not restart the installed app or live backend.
 
 Project discovery and the explicit Home filter reset pass the 12-case Home keeper (excluding the separately documented macOS modifier-key shortcut case), 20 five-worker repetitions, and the mobile discovery flow in WebKit. The unloaded-worktree filter regression fails before the fix. The production cold-entry medians are **364.5 ms before** and **383.5 ms after** (three samples each); this small local sample is not a performance guarantee. The full repository check and 169 focused unit cases pass. The separate e2e typecheck still reports the existing probe/timeline errors and two activity-helper typing errors; no modified files appear in those diagnostics.
 

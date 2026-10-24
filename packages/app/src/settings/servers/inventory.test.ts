@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import { ServerConnection } from "@/runtime/server/registry"
 import type { ExtensionServer } from "@/runtime/extension/servers"
-import { settingsProjects, settingsServers } from "./inventory"
+import { settingsServers } from "./inventory"
+import { projectInventory } from "@/workspaces/project-inventory"
 
 const ssh: ExtensionServer = {
   key: "ssh:build",
@@ -35,10 +36,11 @@ test("settings project inventory reads metadata without acquiring directory stor
 
   const tracked = { ...projects[0], expanded: true, icon: { override: "local-icon" } }
 
-  const inventory = settingsProjects({
-    projects: { list: () => [tracked], closed: () => [projects[1].worktree] },
-    sync: { data: { project: projects } },
-  })
+  const inventory = projectInventory(
+    [tracked],
+    projects.map((project) => ({ ...project, expanded: false })),
+    [projects[1].worktree],
+  )
 
   expect(inventory).toHaveLength(39)
   expect(inventory[0]).toBe(tracked)

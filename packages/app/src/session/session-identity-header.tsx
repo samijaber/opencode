@@ -365,7 +365,7 @@ export function SessionIdentityHeader(props: ParentProps<{ sessionID: string; se
 
   const project = createMemo(() => {
     if (props.session) return server.ctx.projects.forSession(props.session)
-    const projects = server.ctx.projects.list()
+    const projects = server.ctx.projects.available()
     const value = directory()
 
     if (!value) return undefined

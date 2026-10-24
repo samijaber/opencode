@@ -491,7 +491,7 @@ function HomeSessionGroupHeader(props: {
       `}
       classList={{ "home-session-group-header z-[5]": !!props.elevated, "z-10": !props.elevated }}
     >
-      <div class={HOME_SECTION_LABEL} style={{ opacity: props.titleOpacity }}>
+      <div role="heading" aria-level={2} class={HOME_SECTION_LABEL} style={{ opacity: props.titleOpacity }}>
         {props.title}
       </div>
     </div>
