@@ -10,6 +10,7 @@ import { Icon } from "@opencode/ui/icon"
 import { IconButton } from "@opencode/ui/icon-button"
 import { Menu } from "@opencode/ui/menu"
 import { Tooltip } from "@opencode/ui/tooltip"
+import { RelativeTime } from "@opencode/ui/relative-time"
 import { useLanguage } from "@/runtime/i18n/language"
 import { ServerConnection } from "@/runtime/server/registry"
 import { SessionTabAvatarView } from "@/shell/layout/session-tab-avatar"
@@ -472,6 +473,10 @@ function HomeSessionSearchResultRow(
           desktop={props.desktop}
         />
       </div>
+      <RelativeTime
+        timestamp={props.record.session.time.updated}
+        class="shrink-0 whitespace-nowrap text-[12px] leading-text-compact text-v2-text-text-muted [font-weight:440]"
+      />
     </button>
   )
 }
@@ -754,6 +759,10 @@ function HomeSessionRow(
               desktop={props.desktop}
             />
           </div>
+          <RelativeTime
+            timestamp={props.record.session.time.updated}
+            class="shrink-0 whitespace-nowrap text-[12px] leading-text-compact text-v2-text-text-muted [font-weight:440]"
+          />
         </button>
       </Show>
       <Menu

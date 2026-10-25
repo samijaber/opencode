@@ -30,6 +30,7 @@ export type UiI18nSource = {
 }
 
 export type UiI18n = UiI18nSource & {
+  relativeTime: (timestamp: number) => string
   /** Preserve runtime-generated English copy while using the keyed dictionary for every other locale. */
   tDynamic: (key: UiI18nOrdinaryKey, source: string, params?: UiI18nParams) => string
   list: (items: readonly string[]) => string
@@ -87,6 +88,15 @@ function resolveTemplate(text: string, params?: UiI18nParams) {
 export function createUiI18n(source: UiI18nSource): UiI18n {
   return {
     ...source,
+    relativeTime: (timestamp) => {
+      const minutes = Math.floor(Math.max(0, Date.now() - timestamp) / 60_000)
+
+      if (minutes < 1) return source.t("ui.time.justNow")
+      if (minutes < 60) return source.plural("ui.time.minutesAgo", minutes)
+      if (minutes < 1440) return source.plural("ui.time.hoursAgo", Math.floor(minutes / 60))
+
+      return source.plural("ui.time.daysAgo", Math.floor(minutes / 1440))
+    },
     tDynamic: (key, value, params) =>
       source.locale().toLowerCase().split("-")[0] === "en" ? resolveTemplate(value, params) : source.t(key, params),
     // English tool labels intentionally use comma-only lists; the animated count labels use the same punctuation.

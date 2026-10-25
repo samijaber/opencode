@@ -237,6 +237,14 @@ const source = {
   "ui.permission.allowAlways": "Allow always",
   "ui.permission.allowOnce": "Allow once",
 
+  "ui.time.justNow": "just now",
+  "ui.time.minutesAgo.one": "{{count}}m ago",
+  "ui.time.minutesAgo.other": "{{count}}m ago",
+  "ui.time.hoursAgo.one": "{{count}}h ago",
+  "ui.time.hoursAgo.other": "{{count}}h ago",
+  "ui.time.daysAgo.one": "{{count}}d ago",
+  "ui.time.daysAgo.other": "{{count}}d ago",
+
   "ui.message.expand": "Expand message",
   "ui.message.collapse": "Collapse message",
   "ui.message.copy": "Copy",

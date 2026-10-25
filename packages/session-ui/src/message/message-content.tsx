@@ -27,6 +27,7 @@ import { Icon } from "@opencode/ui/icon"
 import { Button } from "@opencode/ui/button"
 import { TextReveal } from "@opencode/ui/text-reveal"
 import { TextShimmer } from "@opencode/ui/text-shimmer"
+import { RelativeTime } from "@opencode/ui/relative-time"
 import { BasicTool } from "../components/basic-tool"
 import { reasoningHeading } from "../timeline/projection"
 import { Card } from "@opencode/ui/card"
@@ -283,7 +284,6 @@ export function CurrentUserMessageDisplay(props: {
   const agents = createMemo(() => props.message.agents ?? [])
   const comments = createMemo(() => props.comments ?? [])
   const model = createMemo(() => modelLabel(data, i18n, props.model))
-  const timefmt = createMemo(() => new Intl.DateTimeFormat(i18n.locale(), { timeStyle: "short" }))
 
   // Mobile shows the current agent and model in the composer and switch notices, so repeating them per message is noise.
   const mobile = createMediaQuery("(max-width: 767px)")
@@ -298,8 +298,6 @@ export function CurrentUserMessageDisplay(props: {
       .filter(Boolean)
       .join("\u00A0\u00B7\u00A0")
   })
-
-  const stamp = createMemo(() => timefmt().format(props.message.time.created))
 
   const copy = async (text: string) => {
     if (!text || !(await writeClipboard(text))) return
@@ -409,111 +407,110 @@ export function CurrentUserMessageDisplay(props: {
           </div>
         </div>
       </Show>
-      {/* Like the TUI, a pending steer of only attachments still offers its actions. */}
-      <Show when={props.text || comments().length > 0 || pending()}>
-        <div data-slot="user-message-copy-wrapper">
-          <span data-slot="user-message-meta-wrap">
-            <Show when={metaHead()}>
-              <span data-slot="user-message-meta" class="text-12-regular text-text-weak cursor-default">
-                {metaHead()}
-              </span>
-            </Show>
-            <Show when={metaHead() && stamp()}>
-              <span data-slot="user-message-meta-sep" class="text-12-regular text-text-weak cursor-default">
-                {"\u00A0\u00B7\u00A0"}
-              </span>
-            </Show>
-            <span data-slot="user-message-meta-tail" class="text-12-regular text-text-weak cursor-default">
-              {stamp()}
-            </span>
-          </span>
-          <Show when={pending()}>
-            <MessageActionButton
-              icon="arrow-down-to-line"
-              label={i18n.t("ui.message.moveToQueue")}
-              disabled={state.updating}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={(event) => {
-                event.stopPropagation()
-                void updatePending("queue")
-              }}
-              aria-label={i18n.t("ui.message.moveToQueue")}
-            />
-            <MessageActionButton
-              icon="outline-trash"
-              label={i18n.t("ui.message.deletePending")}
-              disabled={state.updating}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={(event) => {
-                event.stopPropagation()
-                void updatePending("remove")
-              }}
-              aria-label={i18n.t("ui.message.deletePending")}
-            />
-          </Show>
-          <Show when={props.actions?.revert && !pending()}>
-            <MessageActionButton
-              icon="reset"
-              label={i18n.t("ui.message.revertMessage")}
-              disabled={state.reverting}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={(event) => {
-                event.stopPropagation()
-                void revert()
-              }}
-              aria-label={i18n.t("ui.message.revertMessage")}
-            />
-          </Show>
-          {/* Like the iOS app, a Voice message's copy also offers the full prompt the session received, on right click. */}
-          <Show
-            when={props.voice}
-            fallback={
-              <Show when={props.text}>
-                <MessageActionButton
-                  icon={state.copied ? "check" : "copy"}
-                  label={state.copied ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    void copy(props.text)
-                  }}
-                  aria-label={state.copied ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
-                />
+      <div data-slot="message-footer" data-user="true">
+        {/* Like the TUI, a pending steer of only attachments still offers its actions. */}
+        <Show when={props.text || comments().length > 0 || pending()}>
+          <div data-slot="user-message-copy-wrapper">
+            <span data-slot="user-message-meta-wrap">
+              <Show when={metaHead()}>
+                <span data-slot="user-message-meta" class="text-12-regular text-text-weak cursor-default">
+                  {metaHead()}
+                </span>
               </Show>
-            }
-          >
-            <Menu.Context modal={false}>
-              <Tooltip
-                appearance="compact"
-                value={state.copied ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
-                placement="top"
-                gutter={4}
-              >
-                <Menu.Context.Trigger
-                  as={IconButton}
-                  icon={<Icon name={state.copied ? "check" : "outline-copy"} size="small" />}
-                  size="normal"
-                  variant="ghost-muted"
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    void copy(props.text)
-                  }}
-                  aria-label={state.copied ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
-                />
-              </Tooltip>
-              <Menu.Context.Portal>
-                <Menu.Context.Content>
-                  <Menu.Item onSelect={() => void copy(props.text)}>{i18n.t("ui.message.copyMessage")}</Menu.Item>
-                  <Menu.Item onSelect={() => void copy(props.message.text)}>
-                    {i18n.t("ui.message.copyFullMessage")}
-                  </Menu.Item>
-                </Menu.Context.Content>
-              </Menu.Context.Portal>
-            </Menu.Context>
-          </Show>
-        </div>
-      </Show>
+            </span>
+            <Show when={pending()}>
+              <MessageActionButton
+                icon="arrow-down-to-line"
+                label={i18n.t("ui.message.moveToQueue")}
+                disabled={state.updating}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  void updatePending("queue")
+                }}
+                aria-label={i18n.t("ui.message.moveToQueue")}
+              />
+              <MessageActionButton
+                icon="outline-trash"
+                label={i18n.t("ui.message.deletePending")}
+                disabled={state.updating}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  void updatePending("remove")
+                }}
+                aria-label={i18n.t("ui.message.deletePending")}
+              />
+            </Show>
+            <Show when={props.actions?.revert && !pending()}>
+              <MessageActionButton
+                icon="reset"
+                label={i18n.t("ui.message.revertMessage")}
+                disabled={state.reverting}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  void revert()
+                }}
+                aria-label={i18n.t("ui.message.revertMessage")}
+              />
+            </Show>
+            {/* Like the iOS app, a Voice message's copy also offers the full prompt the session received, on right click. */}
+            <Show
+              when={props.voice}
+              fallback={
+                <Show when={props.text}>
+                  <MessageActionButton
+                    icon={state.copied ? "check" : "copy"}
+                    label={state.copied ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      void copy(props.text)
+                    }}
+                    aria-label={state.copied ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
+                  />
+                </Show>
+              }
+            >
+              <Menu.Context modal={false}>
+                <Tooltip
+                  appearance="compact"
+                  value={state.copied ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
+                  placement="top"
+                  gutter={4}
+                >
+                  <Menu.Context.Trigger
+                    as={IconButton}
+                    icon={<Icon name={state.copied ? "check" : "outline-copy"} size="small" />}
+                    size="normal"
+                    variant="ghost-muted"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      void copy(props.text)
+                    }}
+                    aria-label={state.copied ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
+                  />
+                </Tooltip>
+                <Menu.Context.Portal>
+                  <Menu.Context.Content>
+                    <Menu.Item onSelect={() => void copy(props.text)}>{i18n.t("ui.message.copyMessage")}</Menu.Item>
+                    <Menu.Item onSelect={() => void copy(props.message.text)}>
+                      {i18n.t("ui.message.copyFullMessage")}
+                    </Menu.Item>
+                  </Menu.Context.Content>
+                </Menu.Context.Portal>
+              </Menu.Context>
+            </Show>
+          </div>
+        </Show>
+        <RelativeTime
+          timestamp={props.message.time.created}
+          data-slot="user-message-meta-tail"
+          class="text-12-regular text-text-weak cursor-default"
+        />
+      </div>
     </div>
   )
 }
@@ -739,22 +736,28 @@ export function AssistantTextContent(props: {
         <div data-slot="text-part-body">
           <PacedMarkdown text={props.text} cacheKey={props.id} streaming={props.message.time.completed === undefined} />
         </div>
-        <Show when={props.showCopy}>
-          <div data-slot="text-part-copy-wrapper" data-interrupted={interrupted() ? "" : undefined}>
-            <MessageActionButton
-              icon={copied() ? "check" : "copy"}
-              label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={copy}
-              aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
-            />
-            <Show when={meta()}>
-              <span data-slot="text-part-meta" class="text-12-regular text-text-weak cursor-default">
-                {meta()}
-              </span>
-            </Show>
-          </div>
-        </Show>
+        <div data-slot="message-footer">
+          <RelativeTime
+            timestamp={props.message.time.completed ?? props.message.time.created}
+            class="text-12-regular text-text-weak cursor-default"
+          />
+          <Show when={props.showCopy}>
+            <div data-slot="text-part-copy-wrapper" data-interrupted={interrupted() ? "" : undefined}>
+              <MessageActionButton
+                icon={copied() ? "check" : "copy"}
+                label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={copy}
+                aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
+              />
+              <Show when={meta()}>
+                <span data-slot="text-part-meta" class="text-12-regular text-text-weak cursor-default">
+                  {meta()}
+                </span>
+              </Show>
+            </div>
+          </Show>
+        </div>
       </div>
     </Show>
   )

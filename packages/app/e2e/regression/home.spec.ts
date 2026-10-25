@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test"
 import { expectPath, holdRoute, NO_PROVIDER, project, REMOTE_SERVER, seed, session, sessionHref } from "../utils/app"
 import { mockOpenCodeServer } from "../utils/mock-server"
 import { fixture, mockStressTimeline } from "../utils/session-fixture"
-import { mockRemoteServer } from "../utils/workspace"
+import { mockRemoteServer, mockWorkspace } from "../utils/workspace"
 import { APP_READY_TIMEOUT, expectAppVisible } from "../utils/waits"
 
 test.use({ serviceWorkers: "block" })
@@ -72,6 +72,34 @@ async function openHome(page: Page, input: Parameters<typeof mockStressTimeline>
   })
   await page.goto("/")
 }
+
+test("Home and search show live session ages beside their titles", async ({ page }) => {
+  await page.clock.install({ time: new Date("2025-01-01T02:00:00Z") })
+  await mockWorkspace(page, {
+    name: "Session ages",
+    sessions: [
+      {
+        id: "ses_ages",
+        title: "Timestamp history",
+        time: { created: Date.parse("2024-12-30T00:00:00Z"), updated: Date.parse("2025-01-01T00:00:00Z") },
+      },
+    ],
+  })
+  await page.goto("/")
+  const target = row(page, "Timestamp history")
+  await expect(target.locator("time")).toHaveText("2h ago")
+  await expect(target.locator("time")).toHaveAttribute("datetime", "2025-01-01T00:00:00.000Z")
+  await expect(target.locator("time")).toHaveAttribute("title", /\d{1,2}:\d{2}:\d{2}/)
+  await page.clock.setFixedTime(new Date("2025-01-01T03:00:00Z"))
+  await page.clock.fastForward(30_000)
+  await expect(target.locator("time")).toHaveText("3h ago")
+
+  await page.getByRole("textbox", { name: /Search sessions/ }).fill("Timestamp history")
+  const result = page.getByRole("option").filter({ hasText: "Timestamp history" })
+  await expect(result.locator("time")).toHaveText("3h ago")
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(result.locator("time")).toBeInViewport()
+})
 
 test("the session context menu renames, exports, and deletes a Home session", async ({ page }) => {
   await openHome(page)

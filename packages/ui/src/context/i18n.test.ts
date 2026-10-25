@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test"
-import { createUiI18n, localizedListSeparator, pluralCategory, type UiI18nSource } from "./i18n"
+import { afterEach, describe, expect, setSystemTime, test } from "bun:test"
+import { createUiI18n, localizedListSeparator, pluralCategory, useI18n, type UiI18nSource } from "./i18n"
 
 const i18n = (locale: string, translated: string) => {
   const source: UiI18nSource = {
@@ -61,5 +61,24 @@ describe("localizedListSeparator", () => {
     expect(i18n("en-US", "").list(["Read", "Search"])).toBe("Read, Search")
     expect(i18n("en", "").listSeparator(2, 3)).toBe(",")
     expect(i18n("de", "").list(["Lesen", "Suchen"])).toBe("Lesen und Suchen")
+  })
+})
+
+describe("relativeTime", () => {
+  afterEach(() => setSystemTime())
+
+  test.each([
+    [-60_000, "just now"],
+    [0, "just now"],
+    [59_999, "just now"],
+    [60_000, "1m ago"],
+    [3_599_999, "59m ago"],
+    [3_600_000, "1h ago"],
+    [86_399_999, "23h ago"],
+    [86_400_000, "1d ago"],
+    [1_209_600_000, "14d ago"],
+  ] as const)("formats an age of %d milliseconds as %s", (age, expected) => {
+    setSystemTime(new Date("2025-01-01T12:00:00Z"))
+    expect(useI18n().relativeTime(Date.now() - age)).toBe(expected)
   })
 })

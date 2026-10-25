@@ -21,7 +21,8 @@ story("keeps a manually collapsed tool collapsed when later assistant content st
 })
 
 // Moved from packages/app/e2e/regression/session-timeline-projection.spec.ts
-story("renders interruption independently when the turn is not compacted", async ({ mount }) => {
+story("renders interruption independently when the turn is not compacted", async ({ mount, page }) => {
+  await page.clock.install({ time: new Date("2025-01-01T02:00:36Z") })
   const timeline = await mount("current-session-timeline-rows--conversation", { args: { scenario: "interruption" } })
   await expect(timeline.getByText("Interrupted", { exact: true })).toBeVisible()
   await expect(timeline.getByText("Before", { exact: true })).toBeVisible()
@@ -32,6 +33,29 @@ story("renders interruption independently when the turn is not compacted", async
     .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-timeline-row")))
 
   expect(rows).toEqual(["AssistantPart", "TurnDivider", "AssistantPart"])
+
+  // Every message keeps its age visible, including assistant text without copy actions.
+  const timestamps = timeline.locator('[data-slot="message-footer"] > time')
+  await expect(timestamps).toHaveText(["2h ago", "2h ago", "2h ago"])
+  await expect(timestamps).toHaveCount(3)
+
+  for (const timestamp of await timestamps.all()) {
+    await expect(timestamp).toBeVisible()
+    await expect(timestamp).toHaveAttribute("title", /\d{1,2}:\d{2}:\d{2}/)
+    await expect(timestamp).toHaveCSS("opacity", "1")
+  }
+
+  await expect(timeline.locator('[data-component="user-message"] time')).toHaveAttribute(
+    "datetime",
+    "2025-01-01T00:00:32.000Z",
+  )
+  await expect(timeline.locator('[data-timeline-part-id="msg_story_interrupted_before:text:0"] time')).toHaveAttribute(
+    "datetime",
+    "2025-01-01T00:00:34.000Z",
+  )
+  await page.clock.setFixedTime(new Date("2025-01-01T03:00:36Z"))
+  await page.clock.fastForward(30_000)
+  await expect(timestamps).toHaveText(["3h ago", "3h ago", "3h ago"])
 })
 
 // Moved from packages/app/e2e/regression/session-timeline-projection.spec.ts
