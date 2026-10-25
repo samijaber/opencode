@@ -49,6 +49,12 @@ test("sidebar recent sessions use Home's date groups and include sessions withou
   const sidebar = page.locator('[data-slot="vertical-tabs-sidebar"]')
   const recent = sidebar.getByRole("navigation", { name: "Recent sessions", exact: true })
   await expect(recent.getByRole("heading")).toHaveText(["Today", "Yesterday", "Older"])
+  await expect(recent.getByRole("link", { name: "Today's conversation", exact: true }).locator("time")).toHaveText(
+    "just now",
+  )
+  await expect(recent.getByRole("link", { name: "Yesterday's conversation", exact: true }).locator("time")).toHaveText(
+    "13h ago",
+  )
   await expect(recent.getByRole("region", { name: "Today", exact: true }).getByRole("link")).toHaveAccessibleName(
     "Today's conversation",
   )
@@ -74,6 +80,9 @@ test("sidebar recent sessions use Home's date groups and include sessions withou
   const drawer = page.getByRole("dialog", { name: "Tabs", exact: true })
   const mobileRecent = drawer.getByRole("navigation", { name: "Recent sessions", exact: true })
   await expect(mobileRecent.getByRole("heading")).toHaveText(["Today", "Yesterday", "Older"])
+  await expect(mobileRecent.getByRole("link", { name: "Older conversation", exact: true }).locator("time")).toHaveText(
+    "24d ago",
+  )
   await expect(drawer.getByRole("button", { name: "Home", exact: true })).toBeInViewport()
   await mobileRecent.getByRole("link", { name: "Older conversation", exact: true }).click()
   await expectPath(page, sessionHref("ses_recent_older"))

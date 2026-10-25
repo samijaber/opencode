@@ -1,5 +1,6 @@
 import { createMemo, Index, Show, startTransition } from "solid-js"
 import { Key } from "@solid-primitives/keyed"
+import { RelativeTime } from "@opencode/ui/relative-time"
 import { useGlobal, useServerCtx } from "@/runtime/server/runtime"
 import { ServerConnection, useServers } from "@/runtime/server/registry"
 import { useLayout } from "@/shell/state/layout"
@@ -104,6 +105,10 @@ export function RecentSessions(props: { currentTab?: Tab; onNavigate?: () => voi
                     <span dir="auto" class="min-w-0 flex-1 truncate text-start">
                       {sessionTitle(record().session.title)}
                     </span>
+                    <RelativeTime
+                      timestamp={record().session.time.updated}
+                      class="shrink-0 whitespace-nowrap text-11-medium text-v2-text-text-muted"
+                    />
                   </a>
                 )}
               </Key>
