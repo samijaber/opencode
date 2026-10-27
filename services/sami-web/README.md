@@ -6,7 +6,7 @@ Running work has a distinct bordered section with a count. Task titles and paren
 
 Home and the new-session project picker include known server projects, not just folders opened in this browser. The inventory matches Settings and respects explicitly closed projects. **All projects** resets the Home filter on desktop and in the mobile project dropdown; session search then spans projects. Project filters include sessions from worktrees whose inventories have not loaded yet.
 
-The vertical sidebar and mobile tab drawer keep open tabs above a recent-session list grouped into **Today**, **Yesterday**, and **Older**, using the same cached index, live updates, ordering, and date-group rules as Home. Recent sessions include conversations without open tabs. The mobile drawer bounds the open-tab area so recent sessions and footer controls stay reachable even with many tabs; selecting a recent session closes the drawer. Home, Settings, the composer project picker, and session palettes use the shared server project inventory. Discovery no longer excludes repositories just because their path contains `opencode-test`. These changes live in `packages/app`, which both the web and Electron desktop renderers build; a web deployment does not update an installed desktop app.
+The vertical sidebar and mobile tab drawer keep open tabs above a recent-session list grouped into **Today**, **Yesterday**, and **Older**, using the same cached index, live updates, ordering, and date-group rules as Home. Recent sessions include conversations without open tabs. The mobile drawer scrolls open tabs and recent sessions together, disables tab reordering so row swipes scroll naturally, and keeps footer actions pinned with 44px touch targets; selecting a recent session closes the drawer. Desktop tab reordering is unchanged. Home, Settings, the composer project picker, and session palettes use the shared server project inventory. Discovery no longer excludes repositories just because their path contains `opencode-test`. These changes live in `packages/app`, which both the web and Electron desktop renderers build; a web deployment does not update an installed desktop app.
 
 ## Hosting
 
@@ -63,6 +63,8 @@ To roll back only the custom frontend, run `bunx wrangler deployments list`, the
 - A session's elapsed time is its age from creation, not a precise measurement of active execution time.
 
 ## Verification
+
+The touch-first tab picker passes its native-touch scroll/switch/close regression ten times at five-worker concurrency and the repository-wide `bun run check`. The full 23-case tabs keeper passes 21 cases; the two failures are the previously documented inactive-tab transcript request count and macOS side-tab shortcut mismatch. The touch regression fails on the previous picker.
 
 The mobile drawer correction passes four focused tab cases, seven broader mobile-session cases, WebKit, and ten five-worker repetitions of the cross-layout regression. That regression covers date groups, a recent session without an open tab, drawer dismissal, and a reachable Home button with 20 draft tabs. It fails against the previous production build. The broader mobile suite's remaining palette-shortcut case hits the existing macOS ControlOrMeta mismatch.
 

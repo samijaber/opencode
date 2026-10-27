@@ -24,6 +24,59 @@ const c = { id: "ses_tab_c", title: "Tab C session" }
 
 test.use({ serviceWorkers: "block" })
 
+test.describe("mobile tab picker", () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } })
+
+  test("swiping open tabs scrolls the picker without reordering or navigating", async ({ page }) => {
+    const sessions = Array.from({ length: 12 }, (_, index) => ({
+      id: `ses_mobile_tab_${index}`,
+      title: `Mobile conversation ${index}`,
+    }))
+
+    await mockWorkspace(page, { name: "Mobile tabs", sessions })
+    await page.goto(sessionHref(sessions[0].id))
+    await page.getByRole("button", { name: "Tabs", exact: true }).tap()
+    const drawer = page.getByRole("dialog", { name: "Tabs", exact: true })
+    const titles = drawer.locator("[data-titlebar-tab-title]")
+    const heading = drawer.getByRole("heading", { name: "Open tabs", exact: true })
+    await expect(titles).toHaveText(sessions.map((item) => item.title))
+    await expect(drawer).not.toHaveAttribute("data-transitioning")
+
+    const start = await drawer
+      .locator('[data-slot="tab-link"]')
+      .filter({ has: page.getByText(sessions[1].title, { exact: true }) })
+      .boundingBox()
+
+    if (!start) throw new Error("Open tab has no bounds")
+    const devtools = await page.context().newCDPSession(page)
+    const x = start.x + start.width / 2
+    const y = start.y + start.height / 2
+    await devtools.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] })
+
+    for (let step = 1; step <= 12; step++)
+      await devtools.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [{ x, y: y - step * 15 }],
+      })
+    await devtools.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] })
+    await expect(heading).not.toBeInViewport()
+    await expect(titles).toHaveText(sessions.map((item) => item.title))
+    await expectPath(page, sessionHref(sessions[0].id))
+    await expect(drawer.getByRole("button", { name: "Settings", exact: true })).toBeInViewport()
+
+    const target = drawer.locator('[data-slot="tab-link"]').filter({ hasText: sessions[5].title })
+    await target.tap()
+    await expectPath(page, sessionHref(sessions[5].id))
+    await expect(drawer).toBeHidden()
+    await page.getByRole("button", { name: "Tabs", exact: true }).tap()
+    const tab = drawer.locator("[data-titlebar-tab-slot]").filter({ hasText: sessions[5].title })
+    await tab.getByRole("button", { name: "Close tab", exact: true }).tap()
+    await expect(tab).toHaveCount(0)
+    await expect(drawer).toBeVisible()
+    await expect(titles).toHaveText(sessions.filter((_, index) => index !== 5).map((item) => item.title))
+  })
+})
+
 test("sidebar recent sessions use Home's date groups and include sessions without open tabs", async ({ page }) => {
   const today = new Date(2026, 9, 24, 12).getTime()
   await page.clock.setFixedTime(today)

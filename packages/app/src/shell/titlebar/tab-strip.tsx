@@ -24,6 +24,7 @@ function SessionTabSlot(props: {
   tab: SessionTab
   id: string
   index: number
+  reorderable: boolean
   active: boolean
   orientation: "horizontal" | "vertical"
   session: SessionInfo | undefined
@@ -36,6 +37,9 @@ function SessionTabSlot(props: {
   onClose: () => void
 }) {
   const sortable = useSortable({
+    get disabled() {
+      return !props.reorderable
+    },
     get id() {
       return props.id
     },
@@ -85,6 +89,7 @@ function SessionTabEntry(props: {
   tab: SessionTab
   id: string
   index: number
+  reorderable: boolean
   active: boolean
   orientation: "horizontal" | "vertical"
   serverCtx: ServerCtx | undefined
@@ -198,6 +203,7 @@ function SessionTabEntry(props: {
         tab={props.tab}
         id={props.id}
         index={props.index}
+        reorderable={props.reorderable}
         active={props.active}
         orientation={props.orientation}
         session={session()}
@@ -221,6 +227,7 @@ function DraftTabSlot(props: {
   tab: Extract<Tab, { type: "draft" }>
   id: string
   index: number
+  reorderable: boolean
   active: boolean
   orientation: "horizontal" | "vertical"
   title: string
@@ -228,6 +235,9 @@ function DraftTabSlot(props: {
   onClose: () => void
 }) {
   const sortable = useSortable({
+    get disabled() {
+      return !props.reorderable
+    },
     get id() {
       return props.id
     },
@@ -273,7 +283,7 @@ export function TitlebarTabStrip(props: {
   currentTab: Tab | undefined
   onNavigate: (tab: Tab, el?: HTMLDivElement) => void
   onClose: (tab: Tab) => void
-  onReorder: (keys: string[]) => void
+  onReorder?: (keys: string[]) => void
 }) {
   const global = useGlobal()
   const language = useLanguage()
@@ -397,7 +407,7 @@ export function TitlebarTabStrip(props: {
             const { initialIndex, index } = source
 
             if (initialIndex !== index) {
-              props.onReorder(
+              props.onReorder?.(
                 mergeVisibleTabOrder(
                   props.tabs.map(tabKey),
                   current,
@@ -433,6 +443,7 @@ export function TitlebarTabStrip(props: {
                       tab={tab}
                       id={id}
                       index={visibleIndex()}
+                      reorderable={!!props.onReorder}
                       active={props.currentTab === tab}
                       orientation={vertical() ? "vertical" : "horizontal"}
                       serverCtx={serverCtx()}
@@ -452,6 +463,7 @@ export function TitlebarTabStrip(props: {
                     tab={tab}
                     id={id}
                     index={visibleIndex()}
+                    reorderable={!!props.onReorder}
                     active={props.currentTab === tab}
                     orientation={vertical() ? "vertical" : "horizontal"}
                     title={language.t("session.tab.session")}

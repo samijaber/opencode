@@ -41,14 +41,19 @@
 
 [data-slot="mobile-tabs-drawer-list"] {
   display: flex;
+  flex: 1;
   min-height: 0;
-  max-height: min(20dvh, 144px);
-  flex-shrink: 0;
   flex-direction: column;
+  gap: 8px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 [data-slot="mobile-tabs-drawer"] nav {
-  overscroll-behavior: contain;
+  flex: none;
+  overflow: visible;
 }
 
 [data-slot="mobile-tabs-drawer"] nav a {
@@ -57,12 +62,18 @@
 
 [data-slot="mobile-tabs-drawer"] [data-slot="vertical-tabs"] {
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
+  overflow: visible;
 }
 
 [data-slot="mobile-tabs-drawer"] [data-slot="vertical-tabs-scroll"] {
-  min-height: 0;
-  overscroll-behavior: contain;
+  max-height: none;
+  overflow: visible;
+}
+
+[data-slot="mobile-tabs-drawer"] [data-action^="mobile-tabs-"] {
+  min-height: 44px;
 }
 
 [data-slot="mobile-tabs-drawer"] [data-titlebar-tab] {
