@@ -1,6 +1,6 @@
 # Sami's OpenCode web build
 
-The custom build follows upstream `dev` (2.2.5, `8cfea1086cc87faf1d555f46b66a2afdd81a02ab`, checked October 31, 2026). Prefer upstream behavior over maintaining duplicate implementations.
+The custom build follows upstream `dev` (2.2.5, `7ce35879b8569263f14b37cff6d84394e635b00f`, checked October 31, 2026). Prefer upstream behavior over maintaining duplicate implementations.
 
 Upstream now owns project discovery, live subagent/shell activity and message timestamp presentation. The old custom **Session activity** sheet is retired rather than layered over upstream's activity controls. Its separate completed-command history is not identical to upstream and is no longer provided as a second sheet.
 
@@ -54,6 +54,8 @@ Verify the deployed revision, session activity, navigation, output, refresh/reco
 
 To roll back only the custom frontend, run `bunx wrangler deployments list`, then `bunx wrangler rollback <previous-version-id>` from this directory. To return a hostname to the backend's bundled UI, remove its route from this config and deploy through the same owner route. Keep DNS, Access and the tunnel unchanged. Refresh the phone tab afterward.
 
+Worker version rollback does not undo route changes. When rolling back to a version that predates Hub support, also restore its original hostname routing through the previous clean checkout's deployment configuration; otherwise that older Worker's hostname guard rejects Hub.
+
 ## Data and limits
 
 - Upstream owns live activity and shell output; this build no longer maintains a second browser-side command-history index.
@@ -66,6 +68,10 @@ To roll back only the custom frontend, run `bunx wrangler deployments list`, the
 ### October 31 upstream/Hub integration
 
 Worker routing, streaming, host rejection, shared bundles and Hub manifests are covered by `test/routing.test.ts`. `test/shell-layout.test.ts` uses Chromium's actual safe-area override to check zero duplicate padding with 0px and 59px status-bar insets. This is browser emulation, not physical-iPhone evidence. The tab keeper covers historical recents, merged badges and native touch scrolling.
+
+The safe-area regression fails without the integration override (103px titlebar instead of 36px with a 59px inset) and passes with it. The full repository check passes. Focused checks pass for session creation/merge/recency, API behavior, migration upgrades, event manifests, tab status and Home index/order helpers.
+
+Six broader desktop e2e failures reproduce on unmodified upstream `7ce35879b8`: Home's interface-mode Settings label, numbered keyboard shortcuts, three caret/paste navigation modes, and the vertical-sidebar shortcut hint. These are retained upstream/test-environment limitations, not claimed as passes. The original broad indicator-count assertion was narrowed to the tab strip because the additional recent-session list legitimately has its own indicators.
 
 The notes below describe earlier revisions, not acceptance evidence for this update.
 

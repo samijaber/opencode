@@ -28,6 +28,43 @@ const c = { id: "ses_tab_c", title: "Tab C session" }
 
 test.use({ serviceWorkers: "block" })
 
+test("custom recents update remote read markers while the mobile picker is closed", async ({ page }) => {
+  const idle = Date.now()
+  const workspace = await mockWorkspace(page, {
+    name: "Unread",
+    sessions: [a, { ...b, directory: "C:/OpenCode/Other", time: { created: idle, updated: idle, idle } }],
+    seed: { tabs: [a.id], settings: { appearance: { tabLayout: "vertical" } } },
+  })
+  await page.goto(sessionHref(a.id))
+  const recent = page
+    .locator('[data-slot="vertical-tabs-sidebar"]')
+    .getByRole("navigation", { name: "Recent sessions" })
+  const row = recent.getByRole("link", { name: b.title, exact: true })
+  await expect(row.locator('[data-slot="project-avatar-unread-dot"]')).toBeVisible()
+  await page.setViewportSize({ width: 390, height: 844 })
+  Object.assign(workspace.sessions[1].time, { viewed: idle })
+  await workspace.push([
+    {
+      id: "evt_remote_read",
+      created: idle + 1,
+      type: "session.viewed",
+      durable: { aggregateID: b.id, seq: 1, version: 1 },
+      data: { sessionID: b.id, idle },
+    },
+  ])
+  await page.getByRole("button", { name: "Tabs", exact: true }).click()
+  const drawer = page.getByRole("dialog", { name: "Tabs", exact: true })
+  const mobileRow = drawer
+    .getByRole("navigation", { name: "Recent sessions" })
+    .getByRole("link", { name: b.title, exact: true })
+  await expect(mobileRow).toBeVisible()
+  await expect(mobileRow.locator('[data-slot="project-avatar-unread-dot"]')).toHaveCount(0)
+  await mobileRow.click()
+  await expectPath(page, sessionHref(b.id))
+  await expectSessionTitle(page, b.title)
+  await expect(drawer).toBeHidden()
+})
+
 test("custom recents retain historical conversations alongside upstream tabs", async ({ page }) => {
   const today = new Date(2026, 9, 31, 12).getTime()
   await page.clock.setFixedTime(today)
@@ -987,7 +1024,7 @@ test("switching between busy sessions keeps the busy indicators and the activity
   await expectSessionTitle(page, a.title)
 
   const sidebar = page.locator('[data-slot="vertical-tabs-sidebar"]')
-  const indicators = sidebar.locator('[data-component="activity-ring"]')
+  const indicators = sidebar.locator('[data-slot="vertical-tabs"] [data-component="activity-ring"]')
   const capsule = page.locator('[data-slot="session-activity-chip"]')
   await expect(indicators).toHaveCount(2)
   await expect(capsule).toHaveText("1 subagent")
