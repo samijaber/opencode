@@ -1,4 +1,4 @@
-import { Show } from "solid-js"
+import { Show, Suspense } from "solid-js"
 import { useQuery } from "@tanstack/solid-query"
 import { useGlobal } from "@/runtime/server/runtime"
 import type { ServerConnection } from "@/runtime/server/registry"
@@ -38,23 +38,25 @@ export function SessionMergeIndicator(props: { server: ServerConnection.Key; ses
   const label = () => language.t("session.branch.merged", { branch: result()?.target ?? "" })
 
   return (
-    <Show when={result()?.state === "merged"}>
-      <span class="session-merge-indicator" role="img" aria-label={label()} title={label()}>
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 16 16"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          aria-hidden="true"
-        >
-          <circle cx="4" cy="3" r="1.75" />
-          <circle cx="4" cy="13" r="1.75" />
-          <circle cx="12" cy="3" r="1.75" />
-          <path d="M4 4.75v6.5M12 4.75v1A4.25 4.25 0 0 1 7.75 10H4" />
-        </svg>
-      </span>
-    </Show>
+    <Suspense fallback={null}>
+      <Show when={result()?.state === "merged"}>
+        <span class="session-merge-indicator" role="img" aria-label={label()} title={label()}>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            aria-hidden="true"
+          >
+            <circle cx="4" cy="3" r="1.75" />
+            <circle cx="4" cy="13" r="1.75" />
+            <circle cx="12" cy="3" r="1.75" />
+            <path d="M4 4.75v6.5M12 4.75v1A4.25 4.25 0 0 1 7.75 10H4" />
+          </svg>
+        </span>
+      </Show>
+    </Suspense>
   )
 }

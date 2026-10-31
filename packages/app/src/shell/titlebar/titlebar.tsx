@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createResource, Match, Show, Switch, untrack } from "solid-js"
+import { createEffect, createMemo, createResource, Match, Show, Suspense, Switch, untrack } from "solid-js"
 import { createStore, unwrap } from "solid-js/store"
 import { Portal } from "solid-js/web"
 import { useLocation, useNavigate } from "@solidjs/router"
@@ -720,7 +720,12 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
                                 if (index !== -1) tabsStoreActions.closeTab(index)
                               }}
                             />
-                            <RecentSessions currentTab={currentTab()} onNavigate={() => setMobileTabs("open", false)} />
+                            <Suspense fallback={null}>
+                              <RecentSessions
+                                currentTab={currentTab()}
+                                onNavigate={() => setMobileTabs("open", false)}
+                              />
+                            </Suspense>
                           </div>
                           <button
                             type="button"
@@ -885,7 +890,9 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
                                       />
                                     </div>
                                     <div data-scrollable class="min-h-0 flex-1 overflow-y-auto">
-                                      <RecentSessions currentTab={currentTab()} />
+                                      <Suspense fallback={null}>
+                                        <RecentSessions currentTab={currentTab()} />
+                                      </Suspense>
                                     </div>
                                   </>
                                 }
