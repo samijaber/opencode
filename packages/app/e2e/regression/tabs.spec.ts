@@ -24,6 +24,113 @@ const c = { id: "ses_tab_c", title: "Tab C session" }
 
 test.use({ serviceWorkers: "block" })
 
+test.describe("shared unread indicators", () => {
+  test.use({ hasTouch: true, viewport: { width: 1280, height: 844 } })
+
+  test("sidebar and mobile recents show unread results and clear local and remote reads", async ({ page }) => {
+    const idle = Date.now()
+
+    const workspace = await mockWorkspace(page, {
+      name: "Unread",
+      sessions: [
+        a,
+        { ...b, directory: "C:/OpenCode/Other", time: { created: idle, updated: idle, idle } },
+        { ...c, directory: "C:/OpenCode/Other", time: { created: idle, updated: idle, idle } },
+      ],
+      seed: { tabs: [a.id], settings: { appearance: { tabLayout: "vertical" } } },
+    })
+
+    await page.goto(sessionHref(a.id))
+
+    const recent = page
+      .locator('[data-slot="vertical-tabs-sidebar"]')
+      .getByRole("navigation", { name: "Recent sessions", exact: true })
+
+    const row = recent.getByRole("link", { name: b.title, exact: true })
+    const dot = row.locator('[data-slot="project-avatar-unread-dot"]')
+    await expect(row).toBeVisible()
+    await expect(dot).toBeVisible()
+    await expect(
+      recent.getByRole("link", { name: c.title, exact: true }).locator('[data-slot="project-avatar-unread-dot"]'),
+    ).toBeVisible()
+
+    // Another device reads a session that this client has never opened.
+    Object.assign(workspace.sessions[1].time, { viewed: idle })
+    await workspace.push([
+      {
+        id: "evt_remote_viewed",
+        created: idle + 1,
+        type: "session.viewed",
+        durable: { aggregateID: b.id, seq: 1, version: 1 },
+        data: { sessionID: b.id, idle },
+      },
+    ])
+    await expect(dot).toHaveCount(0)
+
+    // A later response must light the row up again, without reopening the app.
+    Object.assign(workspace.sessions[1].time, { idle: idle + 2, updated: idle + 2 })
+    await workspace.push([
+      {
+        id: "evt_unread_completed",
+        created: idle + 2,
+        type: "session.execution.succeeded",
+        durable: { aggregateID: b.id, seq: 2, version: 1 },
+        data: { sessionID: b.id },
+      },
+    ])
+    await expect(dot).toBeVisible()
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    await expect(page.locator('[data-slot="vertical-tabs-sidebar"]')).toHaveCount(0)
+    // Read updates must also reach the cached index while no recent-session list is mounted.
+    Object.assign(workspace.sessions[2].time, { viewed: idle })
+    await workspace.push([
+      {
+        id: "evt_remote_viewed_closed_picker",
+        created: idle + 3,
+        type: "session.viewed",
+        durable: { aggregateID: c.id, seq: 1, version: 1 },
+        data: { sessionID: c.id, idle },
+      },
+    ])
+    await page.getByRole("button", { name: "Tabs", exact: true }).tap()
+    const drawer = page.getByRole("dialog", { name: "Tabs", exact: true })
+
+    const mobileRow = drawer
+      .getByRole("navigation", { name: "Recent sessions", exact: true })
+      .getByRole("link", { name: b.title, exact: true })
+
+    await expect(mobileRow.locator('[data-slot="project-avatar-unread-dot"]')).toBeVisible()
+
+    const readRow = drawer
+      .getByRole("navigation", { name: "Recent sessions", exact: true })
+      .getByRole("link", { name: c.title, exact: true })
+
+    await expect(readRow).toBeVisible()
+    await expect(readRow.locator('[data-slot="project-avatar-unread-dot"]')).toHaveCount(0)
+
+    const viewed = page.waitForResponse(
+      (response) => response.url().endsWith(`/api/session/${b.id}/view`) && response.request().method() === "POST",
+    )
+
+    await mobileRow.tap()
+    await expectPath(page, sessionHref(b.id))
+    expect((await viewed).ok()).toBe(true)
+    await expect(drawer).toBeHidden()
+    await expectSessionTitle(page, b.title)
+    await page.getByRole("button", { name: "Tabs", exact: true }).tap()
+    await expect(mobileRow.locator('[data-slot="project-avatar-unread-dot"]')).toHaveCount(0)
+    const tab = drawer.locator("[data-titlebar-tab-slot]").filter({ hasText: b.title })
+    await expect(tab.locator('[data-slot="tab-unread-dot"]')).toHaveCount(0)
+    await drawer.locator("[data-titlebar-tab-link]").filter({ hasText: a.title }).tap()
+    await expectPath(page, sessionHref(a.id))
+    await page.getByRole("button", { name: "Tabs", exact: true }).tap()
+    await expect(mobileRow).toBeVisible()
+    await expect(mobileRow.locator('[data-slot="project-avatar-unread-dot"]')).toHaveCount(0)
+    await expect(tab.locator('[data-slot="tab-unread-dot"]')).toHaveCount(0)
+  })
+})
+
 test.describe("mobile tab picker", () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } })
 

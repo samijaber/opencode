@@ -3,6 +3,12 @@
 - This repository does not use Changesets. Do not add `.changeset` files; follow the existing release workflow instead.
 - The default branch is `dev`. Base branches and worktrees on `origin/dev`, target PRs at `dev`, and diff against `origin/dev` unless told otherwise.
 
+## Mobile-First Web UX
+
+- Sami opens OpenCode from his phone approximately 99% of the time. Treat mobile UX as the primary design and acceptance target for web UI work, not a secondary responsive adaptation.
+- Design for touch first: use comfortably sized targets (at least 44px for primary controls), keep important actions reachable, and make scrolling reliable. Drag/reorder gestures must not intercept ordinary swipes. Essential actions must not require hover or keyboard shortcuts.
+- Verify affected web UI flows at phone widths with touch input, not just a resized desktop screenshot. Account for short viewports, browser chrome, safe areas, and the on-screen keyboard where relevant. Preserve desktop usability, but do not trade away mobile usability for desktop convenience.
+
 ## Live TUI Testing
 
 - Run `bun run dev:live` from a development worktree to test its TUI against the currently elected `opencode` background server and live sessions.

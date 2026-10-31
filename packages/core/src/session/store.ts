@@ -1,6 +1,21 @@
 export * as SessionStore from "./store.js"
 
-import { and, asc, desc, eq, gt, isNotNull, isNull, like, lt, notInArray, or, sql, type SQL } from "drizzle-orm"
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  getTableColumns,
+  gt,
+  isNotNull,
+  isNull,
+  like,
+  lt,
+  notInArray,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
 import { Project } from "@opencode/schema/project"
 import { Workspace } from "@opencode/schema/workspace"
@@ -11,8 +26,41 @@ import { SessionHistory } from "./history.js"
 import { MessageDecodeError } from "./error.js"
 import { SessionMessage } from "./message.js"
 import { Session } from "@opencode/schema/session"
-import { SessionMessageTable, SessionTable } from "./sql.js"
+import { SessionInboxTable, SessionMessageTable, SessionTable } from "./sql.js"
 import { fromRow } from "./info.js"
+
+// Session mutations also advance the stored time_updated. Recency instead comes
+// from the last conversation message, ignoring visits and transcript notices.
+// Sequence, rather than MAX(timestamp), identifies the last message after reverts,
+// forks, imports, or clock changes. Queued prompts count too; empty sessions
+// fall back to their creation. Limit each source before merging so history is
+// read through the sequence indexes rather than sorted in full per session.
+const activity = sql<number>`coalesce((
+  select time from (
+    select * from (
+      select coalesce(json_extract(${SessionMessageTable.data}, '$.time.completed'), ${SessionMessageTable.time_created}) as time,
+        ${SessionMessageTable.seq} as seq
+      from ${SessionMessageTable}
+      where ${SessionMessageTable.session_id} = ${SessionTable.id}
+        and ${SessionMessageTable.type} in ('user', 'assistant', 'synthetic', 'shell')
+      order by ${SessionMessageTable.seq} desc
+      limit 1
+    )
+    union all
+    select * from (
+      select ${SessionInboxTable.time_created} as time, ${SessionInboxTable.enqueued_seq} as seq
+      from ${SessionInboxTable}
+      where ${SessionInboxTable.session_id} = ${SessionTable.id}
+        and ${SessionInboxTable.type} in ('user', 'synthetic')
+      order by ${SessionInboxTable.enqueued_seq} desc
+      limit 1
+    )
+  )
+  order by seq desc
+  limit 1
+), ${SessionTable.time_created})`
+
+const columns = { ...getTableColumns(SessionTable), time_updated: activity.as("time_updated") }
 
 const ListInputBase = {
   workspaceID: Workspace.ID.pipe(Schema.optional),
@@ -93,14 +141,19 @@ const layer = Layer.effect(
 
     return Service.of({
       get: Effect.fnUntraced(function* (sessionID) {
-        const row = yield* db.select().from(SessionTable).where(eq(SessionTable.id, sessionID)).get().pipe(Effect.orDie)
+        const row = yield* db
+          .select(columns)
+          .from(SessionTable)
+          .where(eq(SessionTable.id, sessionID))
+          .get()
+          .pipe(Effect.orDie)
         return row ? fromRow(row) : undefined
       }),
       list: Effect.fn("SessionStore.list")(function* (input = {}) {
         const direction = input.anchor?.direction ?? "next"
         const requestedOrder = input.order ?? "desc"
         const order = direction === "previous" ? (requestedOrder === "asc" ? "desc" : "asc") : requestedOrder
-        const sortColumn = SessionTable.time_updated
+        const sortColumn = activity
         const conditions: SQL[] = []
         if ("directory" in input) conditions.push(eq(SessionTable.directory, input.directory))
         if (input.workspaceID) conditions.push(eq(SessionTable.workspace_id, input.workspaceID))
@@ -125,11 +178,11 @@ const layer = Layer.effect(
           )
         }
         const query = db
-          .select()
+          .select(columns)
           .from(SessionTable)
           .where(conditions.length > 0 ? and(...conditions) : undefined)
           .orderBy(
-            order === "asc" ? asc(sortColumn) : desc(sortColumn),
+            order === "asc" ? asc(columns.time_updated) : desc(columns.time_updated),
             order === "asc" ? asc(SessionTable.id) : desc(SessionTable.id),
           )
         const rows = yield* (input.limit === undefined ? query.all() : query.limit(input.limit).all()).pipe(

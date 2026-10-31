@@ -469,12 +469,12 @@ describe("Session.create", () => {
       )
       yield* db
         .update(SessionTable)
-        .set({ time_created: 2, time_updated: 5_000 })
+        .set({ time_created: 1, time_updated: 5_000 })
         .where(eq(SessionTable.id, staleRoot.id))
         .run()
       yield* db
         .update(SessionTable)
-        .set({ time_created: 1, time_updated: 10_000 })
+        .set({ time_created: 2, time_updated: 10_000 })
         .where(eq(SessionTable.id, root.id))
         .run()
 
@@ -1434,7 +1434,7 @@ describe("SessionTransfer", () => {
         permissions: [{ action: "edit", resource: "*", effect: "deny" }],
       })
       expect(imported.time).toMatchObject({
-        updated: DateTime.makeUnsafe(1_000),
+        updated: DateTime.makeUnsafe(100),
         idle: DateTime.makeUnsafe(200),
         viewed: DateTime.makeUnsafe(150),
       })

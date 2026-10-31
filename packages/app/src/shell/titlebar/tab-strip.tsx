@@ -36,23 +36,23 @@ function SessionTabSlot(props: {
   onNavigate: (element: HTMLDivElement) => void
   onClose: () => void
 }) {
-  const sortable = useSortable({
-    get disabled() {
-      return !props.reorderable
-    },
-    get id() {
-      return props.id
-    },
-    get index() {
-      return props.index
-    },
-  })
+  // The strip variant fixes reorderability at mount; mobile rows never register a drag source.
+  const sortable = props.reorderable
+    ? useSortable({
+        get id() {
+          return props.id
+        },
+        get index() {
+          return props.index
+        },
+      })
+    : undefined
 
   let ref!: HTMLDivElement
 
   return (
     <div
-      ref={sortable.ref}
+      ref={sortable?.ref}
       data-titlebar-tab-slot
       data-tab-key={props.id}
       data-active={props.active}
@@ -78,7 +78,7 @@ function SessionTabSlot(props: {
         onNavigate={() => props.onNavigate(ref)}
         onClose={props.onClose}
         active={props.active}
-        dragging={sortable.isDragSource()}
+        dragging={sortable?.isDragSource()}
         orientation={props.orientation}
       />
     </div>
@@ -234,23 +234,22 @@ function DraftTabSlot(props: {
   onNavigate: (element: HTMLDivElement) => void
   onClose: () => void
 }) {
-  const sortable = useSortable({
-    get disabled() {
-      return !props.reorderable
-    },
-    get id() {
-      return props.id
-    },
-    get index() {
-      return props.index
-    },
-  })
+  const sortable = props.reorderable
+    ? useSortable({
+        get id() {
+          return props.id
+        },
+        get index() {
+          return props.index
+        },
+      })
+    : undefined
 
   let ref!: HTMLDivElement
 
   return (
     <div
-      ref={sortable.ref}
+      ref={sortable?.ref}
       data-titlebar-tab-slot
       data-tab-key={props.id}
       data-active={props.active}
@@ -270,7 +269,7 @@ function DraftTabSlot(props: {
         onNavigate={() => props.onNavigate(ref)}
         onClose={props.onClose}
         active={props.active}
-        dragging={sortable.isDragSource()}
+        dragging={sortable?.isDragSource()}
         orientation={props.orientation}
       />
     </div>
@@ -350,6 +349,69 @@ export function TitlebarTabStrip(props: {
     if (next) props.onNavigate(next)
   }
 
+  const list = () => (
+    <div
+      data-titlebar-tab-list
+      data-orientation={vertical() ? "vertical" : "horizontal"}
+      class="flex w-full min-w-0"
+      classList={{ "flex-row items-center": !vertical(), "flex-col items-stretch": vertical() }}
+      ref={listRef}
+    >
+      <For each={props.tabs}>
+        {(tab) => {
+          const id = tabKey(tab)
+          let ref!: HTMLDivElement
+          const visibleIndex = () => visibleTabs().findIndex((item) => tabKey(item) === id)
+          useTabShortcut(visibleIndex, () => props.onNavigate(tab, ref))
+
+          const serverCtx = useServerCtx(() => {
+            if (tab.type !== "session") return
+
+            return global.servers.list().find((item) => ServerConnection.key(item) === tab.server)
+          })
+
+          if (tab.type === "session") {
+            return (
+              <SessionTabEntry
+                tab={tab}
+                id={id}
+                index={visibleIndex()}
+                reorderable={!!props.onReorder}
+                active={props.currentTab === tab}
+                orientation={vertical() ? "vertical" : "horizontal"}
+                serverCtx={serverCtx()}
+                onVisibleChange={(visible) => setVisibility(id, visible)}
+                onUnreadChange={(value) => setUnread(id, value)}
+                onNavigate={(element) => {
+                  ref = element
+                  props.onNavigate(tab, element)
+                }}
+                onClose={() => props.onClose(tab)}
+              />
+            )
+          }
+
+          return (
+            <DraftTabSlot
+              tab={tab}
+              id={id}
+              index={visibleIndex()}
+              reorderable={!!props.onReorder}
+              active={props.currentTab === tab}
+              orientation={vertical() ? "vertical" : "horizontal"}
+              title={language.t("session.tab.session")}
+              onNavigate={(element) => {
+                ref = element
+                props.onNavigate(tab, element)
+              }}
+              onClose={() => props.onClose(tab)}
+            />
+          )
+        }}
+      </For>
+    </div>
+  )
+
   return (
     <div
       data-slot={vertical() ? "vertical-tabs" : "titlebar-tabs"}
@@ -365,119 +427,65 @@ export function TitlebarTabStrip(props: {
           "max-h-full flex-col overflow-y-auto overflow-x-hidden": vertical(),
         }}
       >
-        <DragDropProvider
-          sensors={[
-            PointerSensor.configure({
-              activationConstraints: (event) =>
-                event.pointerType === "touch"
-                  ? [new PointerActivationConstraints.Distance({ value: 8 })]
-                  : [new PointerActivationConstraints.Distance({ value: 4 })],
-              preventActivation: (event) =>
-                event.target instanceof Element &&
-                !!event.target.closest('[data-slot="tab-close"], [contenteditable="true"]'),
-            }),
-          ]}
-          modifiers={[
-            vertical() ? RestrictToVerticalAxis : RestrictToHorizontalAxis,
-            RestrictToElement.configure({ element: () => listRef }),
-          ]}
-          plugins={(defaults) => [
-            ...defaults.filter((plugin) => plugin !== Accessibility),
-            AutoScroller.configure({ acceleration: 8, threshold: vertical() ? { x: 0, y: 0.05 } : { x: 0.05, y: 0 } }),
-            Feedback.configure({ dropAnimation: null }),
-          ]}
-          onDragStart={(event) => {
-            const source = event.operation.source
+        <Show when={props.onReorder} fallback={list()}>
+          <DragDropProvider
+            sensors={[
+              PointerSensor.configure({
+                activationConstraints: (event) =>
+                  event.pointerType === "touch"
+                    ? [new PointerActivationConstraints.Distance({ value: 8 })]
+                    : [new PointerActivationConstraints.Distance({ value: 4 })],
+                preventActivation: (event) =>
+                  event.target instanceof Element &&
+                  !!event.target.closest('[data-slot="tab-close"], [contenteditable="true"]'),
+              }),
+            ]}
+            modifiers={[
+              vertical() ? RestrictToVerticalAxis : RestrictToHorizontalAxis,
+              RestrictToElement.configure({ element: () => listRef }),
+            ]}
+            plugins={(defaults) => [
+              ...defaults.filter((plugin) => plugin !== Accessibility),
+              AutoScroller.configure({
+                acceleration: 8,
+                threshold: vertical() ? { x: 0, y: 0.05 } : { x: 0.05, y: 0 },
+              }),
+              Feedback.configure({ dropAnimation: null }),
+            ]}
+            onDragStart={(event) => {
+              const source = event.operation.source
 
-            if (!source) return
-            const tab = props.tabs.find((item) => tabKey(item) === source.id.toString())
+              if (!source) return
+              const tab = props.tabs.find((item) => tabKey(item) === source.id.toString())
 
-            if (!tab) return
+              if (!tab) return
 
-            if (vertical()) return
-            const tabEl = source.element?.querySelector<HTMLDivElement>("[data-titlebar-tab]")
-            props.onNavigate(tab, tabEl ?? undefined)
-          }}
-          onDragEnd={(event) => {
-            const current = visibleTabIds()
-            const source = event.operation.source
+              if (vertical()) return
+              const tabEl = source.element?.querySelector<HTMLDivElement>("[data-titlebar-tab]")
+              props.onNavigate(tab, tabEl ?? undefined)
+            }}
+            onDragEnd={(event) => {
+              const current = visibleTabIds()
+              const source = event.operation.source
 
-            if (event.canceled || !isSortable(source)) return
+              if (event.canceled || !isSortable(source)) return
 
-            const { initialIndex, index } = source
+              const { initialIndex, index } = source
 
-            if (initialIndex !== index) {
-              props.onReorder?.(
-                mergeVisibleTabOrder(
-                  props.tabs.map(tabKey),
-                  current,
-                  arrayMove(current, source.initialIndex, source.index),
-                ),
-              )
-            }
-          }}
-        >
-          <div
-            data-titlebar-tab-list
-            data-orientation={vertical() ? "vertical" : "horizontal"}
-            class="flex w-full min-w-0"
-            classList={{ "flex-row items-center": !vertical(), "flex-col items-stretch": vertical() }}
-            ref={listRef}
-          >
-            <For each={props.tabs}>
-              {(tab) => {
-                const id = tabKey(tab)
-                let ref!: HTMLDivElement
-                const visibleIndex = () => visibleTabs().findIndex((item) => tabKey(item) === id)
-                useTabShortcut(visibleIndex, () => props.onNavigate(tab, ref))
-
-                const serverCtx = useServerCtx(() => {
-                  if (tab.type !== "session") return
-
-                  return global.servers.list().find((item) => ServerConnection.key(item) === tab.server)
-                })
-
-                if (tab.type === "session") {
-                  return (
-                    <SessionTabEntry
-                      tab={tab}
-                      id={id}
-                      index={visibleIndex()}
-                      reorderable={!!props.onReorder}
-                      active={props.currentTab === tab}
-                      orientation={vertical() ? "vertical" : "horizontal"}
-                      serverCtx={serverCtx()}
-                      onVisibleChange={(visible) => setVisibility(id, visible)}
-                      onUnreadChange={(value) => setUnread(id, value)}
-                      onNavigate={(element) => {
-                        ref = element
-                        props.onNavigate(tab, element)
-                      }}
-                      onClose={() => props.onClose(tab)}
-                    />
-                  )
-                }
-
-                return (
-                  <DraftTabSlot
-                    tab={tab}
-                    id={id}
-                    index={visibleIndex()}
-                    reorderable={!!props.onReorder}
-                    active={props.currentTab === tab}
-                    orientation={vertical() ? "vertical" : "horizontal"}
-                    title={language.t("session.tab.session")}
-                    onNavigate={(element) => {
-                      ref = element
-                      props.onNavigate(tab, element)
-                    }}
-                    onClose={() => props.onClose(tab)}
-                  />
+              if (initialIndex !== index) {
+                props.onReorder?.(
+                  mergeVisibleTabOrder(
+                    props.tabs.map(tabKey),
+                    current,
+                    arrayMove(current, source.initialIndex, source.index),
+                  ),
                 )
-              }}
-            </For>
-          </div>
-        </DragDropProvider>
+              }
+            }}
+          >
+            {list()}
+          </DragDropProvider>
+        </Show>
       </div>
       <Show when={!vertical()}>
         <div

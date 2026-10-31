@@ -1,5 +1,10 @@
 import { describe, expect } from "bun:test"
-import { Effect } from "effect"
+import { DateTime, Effect } from "effect"
+import { TestClock } from "effect/testing"
+import { Agent } from "@opencode/schema/agent"
+import { Model } from "@opencode/schema/model"
+import { Money } from "@opencode/schema/money"
+import { Provider } from "@opencode/schema/provider"
 import { Bus } from "@opencode/core/bus"
 import { Database } from "@opencode/core/database/database"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
@@ -30,20 +35,20 @@ const seedSessions = (rows: { id: string; updated: number }[]) =>
     yield* Effect.forEach(rows, (row) =>
       Effect.gen(function* () {
         const sessionID = Session.ID.make(row.id)
-        yield* bus.publish(SessionEvent.Created, {
-          sessionID,
-          projectID: Project.ID.global,
-          location: { directory },
-          slug: "store-test",
-          version: "test",
-        })
         yield* bus.replay({
           id: Event.ID.create(),
           created: row.updated,
           aggregateID: sessionID,
-          seq: 1,
-          type: Bus.versionedType(SessionEvent.Renamed.type, 1),
-          data: { sessionID, title: row.id },
+          seq: 0,
+          type: Bus.versionedType(SessionEvent.Created.type, 1),
+          data: {
+            sessionID,
+            projectID: Project.ID.global,
+            location: { directory },
+            slug: "store-test",
+            title: row.id,
+            version: "test",
+          },
         })
       }),
     )
@@ -51,6 +56,69 @@ const seedSessions = (rows: { id: string; updated: number }[]) =>
   })
 
 describe("SessionStore", () => {
+  it.effect("uses the last conversation message for recency, not views or session edits", () =>
+    Effect.gen(function* () {
+      const bus = yield* seedSessions([
+        { id: "ses_older", updated: 10 },
+        { id: "ses_newer", updated: 20 },
+      ])
+      const store = yield* SessionStore.Service
+      const sessionID = Session.ID.make("ses_older")
+      const assistantMessageID = SessionMessage.ID.make("msg_latest")
+
+      yield* TestClock.setTime(10)
+      yield* bus.publish(SessionEvent.Synthetic, { sessionID, text: "Older message" })
+      yield* TestClock.setTime(20)
+      yield* bus.publish(SessionEvent.Synthetic, { sessionID: Session.ID.make("ses_newer"), text: "Newer message" })
+      yield* TestClock.setTime(30)
+      yield* bus.publish(SessionEvent.Renamed, { sessionID, title: "Renamed" })
+      yield* bus.publish(SessionEvent.MetadataUpdated, { sessionID, metadata: { opened: true } })
+      yield* bus.publish(SessionEvent.Permissions, { sessionID, permissions: [] })
+      yield* bus.publish(SessionEvent.ModelSelected, {
+        sessionID,
+        model: { id: Model.ID.make("model"), providerID: Provider.ID.make("provider") },
+      })
+      yield* bus.publish(SessionEvent.Execution.Succeeded, { sessionID })
+      yield* bus.publish(SessionEvent.Viewed, { sessionID, idle: 30 })
+
+      expect((yield* store.list()).map((session) => String(session.id))).toEqual(["ses_newer", "ses_older"])
+      expect((yield* store.get(sessionID))?.time.updated).toEqual(DateTime.makeUnsafe(10))
+
+      yield* TestClock.setTime(40)
+      yield* bus.publish(SessionEvent.Step.Started, {
+        sessionID,
+        assistantMessageID,
+        agent: Agent.ID.make("build"),
+        model: { id: Model.ID.make("model"), providerID: Provider.ID.make("provider") },
+        started: 35,
+      })
+      expect((yield* store.get(sessionID))?.time.updated).toEqual(DateTime.makeUnsafe(35))
+      expect((yield* store.list()).map((session) => String(session.id))).toEqual(["ses_older", "ses_newer"])
+
+      yield* TestClock.setTime(50)
+      yield* bus.publish(SessionEvent.Step.Ended, {
+        sessionID,
+        assistantMessageID,
+        finish: "stop",
+        cost: Money.USD.make(0),
+        tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+      })
+      expect((yield* store.get(sessionID))?.time.updated).toEqual(DateTime.makeUnsafe(50))
+
+      // Durable sequence defines the last message, even if the wall clock went backwards.
+      yield* TestClock.setTime(15)
+      yield* bus.publish(SessionEvent.Synthetic, { sessionID, text: "Last message" })
+      expect((yield* store.get(sessionID))?.time.updated).toEqual(DateTime.makeUnsafe(15))
+      expect((yield* store.list()).map((session) => String(session.id))).toEqual(["ses_newer", "ses_older"])
+      expect(
+        (yield* store.list({
+          limit: 1,
+          anchor: { id: Session.ID.make("ses_newer"), time: 20, direction: "next" },
+        })).map((session) => String(session.id)),
+      ).toEqual(["ses_older"])
+    }),
+  )
+
   it.effect("lists by updated time and ID with exclusive two-item pages in either direction", () =>
     Effect.gen(function* () {
       yield* seedSessions([
@@ -124,7 +192,7 @@ describe("SessionStore", () => {
             id: Event.ID.make(event.id),
             created: event.created,
             aggregateID: sessionID,
-            seq: index + 2,
+            seq: index + 1,
             type: Bus.versionedType(SessionEvent.Synthetic.type, 1),
             data: { sessionID, text: event.id },
           }),

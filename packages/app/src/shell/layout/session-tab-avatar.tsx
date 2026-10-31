@@ -1,5 +1,6 @@
 import type { LocalProject } from "@/shell/state/layout"
 import type { ServerConnection } from "@/runtime/server/registry"
+import type { SessionInfo } from "@opencode/client/promise"
 import { useSessionTabAvatarState } from "@/shell/layout/project-avatar-state"
 import {
   displayName,
@@ -15,11 +16,13 @@ export function SessionTabAvatar(props: {
   directory: string
   sessionId: string
   server: ServerConnection.Key
+  snapshot?: SessionInfo
 }) {
   const state = useSessionTabAvatarState(
     () => props.server,
     () => props.sessionId,
     () => true,
+    () => props.snapshot,
   )
 
   return (

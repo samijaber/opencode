@@ -153,8 +153,7 @@ export function createHomeSessionsController(home: HomeController) {
       .update({ sessionID: session.id, title: next })
       .then(() => {
         ctx.data.session.remember({ ...(ctx.data.session.get(session.id) ?? session), title: next })
-        // Rename advances time.updated server-side; re-sync the canonical
-        // record so date grouping and ordering do not go stale.
+        // Re-sync the canonical record after the rename.
         ctx.data.session.invalidate(session.id)
         void ctx.data.session.sync(session.id).catch(() => {})
         queryClient.setQueryData<SessionInfo[]>(["home-sessions", conn], (current) =>

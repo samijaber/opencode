@@ -1233,6 +1233,33 @@ function mockHandlers(
               ? Effect.succeed({ data: currentSession(session, config.directory) })
               : Effect.fail(new MockNotFound({ message: "Session not found" }))
           }),
+        sessionView: (ctx) =>
+          Effect.gen(function* () {
+            const session = config.sessions.find((item) => item.id === ctx.params.sessionID)
+
+            if (!session) return yield* new MockNotFound({ message: "Session not found" })
+            const time = currentSession(session, config.directory).time
+
+            if (
+              time.idle === undefined ||
+              ctx.payload.idle > time.idle ||
+              (time.viewed ?? -Infinity) >= ctx.payload.idle
+            )
+              return yield* noContent
+
+            session.time = { ...time, viewed: ctx.payload.idle }
+            state.emit([
+              {
+                id: `evt_viewed_${session.id}_${ctx.payload.idle}`,
+                created: Date.now(),
+                type: "session.viewed",
+                durable: { aggregateID: session.id, seq: ctx.payload.idle, version: 1 },
+                data: { sessionID: session.id, idle: ctx.payload.idle },
+              },
+            ])
+
+            return yield* noContent
+          }),
         sessionRemove: () => noContent,
         sessionShell: () => noContent,
         sessionForm: (ctx) =>

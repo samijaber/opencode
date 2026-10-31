@@ -1,5 +1,16 @@
 import { createSimpleContext } from "@opencode/ui/context"
-import { Accessor, batch, createEffect, createMemo, createResource, createRoot, getOwner, untrack } from "solid-js"
+import {
+  Accessor,
+  batch,
+  createEffect,
+  createMemo,
+  createResource,
+  createRoot,
+  getOwner,
+  onCleanup,
+  untrack,
+} from "solid-js"
+import { useQueryClient } from "@tanstack/solid-query"
 import { createServerProjects, RECENTLY_CLOSED_DISPLAY_LIMIT, ServerConnection, useServers } from "./registry"
 import { pathKey } from "@/workspaces/path-key"
 import { projectInventory } from "@/workspaces/project-inventory"
@@ -198,6 +209,21 @@ function createServerController(
   const sync = createServerSyncContext(sdk, data)
   createPermissionAutoApprover({ sdk, data })
   const notification = createServerNotificationState({ sdk, data, key: connKey, coordinator: notificationCoordinator })
+  const queryClient = useQueryClient()
+
+  // Index-only sessions aren't refreshed by the session cache. Keep their shared read markers current even
+  // while Home and the mobile picker are closed, without fetching each session or the whole index again.
+  onCleanup(
+    data.on("session.viewed", (event) => {
+      queryClient.setQueryData<SessionInfo[]>(["home-sessions", conn], (current) =>
+        current?.map((session) =>
+          session.id === event.data.sessionID && event.data.idle > (session.time.viewed ?? -Infinity)
+            ? { ...session, time: { ...session.time, viewed: event.data.idle } }
+            : session,
+        ),
+      )
+    }),
+  )
 
   function enrich(project: { worktree: string; expanded: boolean }) {
     const [childStore] = sync.child(project.worktree, { bootstrap: false })

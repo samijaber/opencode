@@ -101,6 +101,7 @@ export function RecentSessions(props: { currentTab?: Tab; onNavigate?: () => voi
                       directory={record().session.location.directory}
                       sessionId={record().session.id}
                       server={ServerConnection.key(connection()!)}
+                      snapshot={record().session}
                     />
                     <span dir="auto" class="min-w-0 flex-1 truncate text-start">
                       {sessionTitle(record().session.title)}
