@@ -33,10 +33,12 @@ export function SessionMergeIndicator(props: { server: ServerConnection.Key; ses
     throwOnError: false,
   }))
 
-  const label = () => language.t("session.branch.merged", { branch: query.data?.target ?? "" })
+  // A cold badge must not suspend the surrounding session while its optional status is loading.
+  const result = () => (query.isPending || query.isError ? undefined : query.data)
+  const label = () => language.t("session.branch.merged", { branch: result()?.target ?? "" })
 
   return (
-    <Show when={!query.isError && query.data?.state === "merged"}>
+    <Show when={result()?.state === "merged"}>
       <span class="session-merge-indicator" role="img" aria-label={label()} title={label()}>
         <svg
           width="16"
