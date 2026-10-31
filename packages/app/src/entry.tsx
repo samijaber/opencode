@@ -14,6 +14,7 @@ import zh from "@/runtime/i18n/zh"
 import { authFromToken } from "@/runtime/server/api"
 import pkg from "../package.json"
 import { ServerConnection } from "@/runtime/server/registry"
+import { initializeSharedPreferences } from "@/runtime/persistence/shared"
 
 const getLocale = () => {
   if (typeof navigator === "undefined") return "en" as const
@@ -77,40 +78,42 @@ if (import.meta.env.VITE_SENTRY_DSN) {
 if (root instanceof HTMLElement && root.dataset.opencodeMounted === undefined) {
   // Lazy chunks can import the entry chunk back under a distinct URL, so claim the root before async startup.
   root.dataset.opencodeMounted = ""
-  void loadInitialLocale().then((locale) => {
-    const auth = authFromToken(new URLSearchParams(location.search).get("auth_token"))
-    clearAuthToken()
-    const standalone = isStandalone()
-    root.dataset.standalone = String(standalone)
+  void initializeSharedPreferences()
+    .then(loadInitialLocale)
+    .then((locale) => {
+      const auth = authFromToken(new URLSearchParams(location.search).get("auth_token"))
+      clearAuthToken()
+      const standalone = isStandalone()
+      root.dataset.standalone = String(standalone)
 
-    if (standalone) restorePwaRoute()
+      if (standalone) restorePwaRoute()
 
-    const server: ServerConnection.Http | undefined = web.currentServerUrl
-      ? {
-          type: "http",
-          authToken: !!auth,
-          http: {
-            url: web.currentServerUrl,
-            ...auth,
-          },
-        }
-      : undefined
+      const server: ServerConnection.Http | undefined = web.currentServerUrl
+        ? {
+            type: "http",
+            authToken: !!auth,
+            http: {
+              url: web.currentServerUrl,
+              ...auth,
+            },
+          }
+        : undefined
 
-    render(
-      () => (
-        <PlatformProvider value={web.platform}>
-          <AppBaseProviders locale={locale}>
-            <AppInterface
-              canonicalLocalServer={server ? ServerConnection.key(server) : undefined}
-              servers={server ? [server] : []}
-            >
-              <KeyboardInsets />
-              {standalone && <PwaRoutePersistence />}
-            </AppInterface>
-          </AppBaseProviders>
-        </PlatformProvider>
-      ),
-      root,
-    )
-  })
+      render(
+        () => (
+          <PlatformProvider value={web.platform}>
+            <AppBaseProviders locale={locale}>
+              <AppInterface
+                canonicalLocalServer={server ? ServerConnection.key(server) : undefined}
+                servers={server ? [server] : []}
+              >
+                <KeyboardInsets />
+                {standalone && <PwaRoutePersistence />}
+              </AppInterface>
+            </AppBaseProviders>
+          </PlatformProvider>
+        ),
+        root,
+      )
+    })
 }

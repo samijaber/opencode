@@ -8,6 +8,7 @@ import oc2ThemeJson from "./themes/oc-2.json"
 import { resolveThemeVariant, themeToCss } from "./resolve"
 import { resolveThemeVariantV2, themeV2ToCss } from "./v2/resolve"
 import type { DesktopTheme } from "./types"
+import { notifyStorageWrite } from "@opencode/util/storage-events"
 
 export type ColorScheme = "light" | "dark" | "system"
 
@@ -111,6 +112,7 @@ function write(key: string, value: string) {
 
   try {
     localStorage.setItem(key, value)
+    notifyStorageWrite(key, value)
   } catch {}
 }
 
@@ -119,6 +121,7 @@ function drop(key: string) {
 
   try {
     localStorage.removeItem(key)
+    notifyStorageWrite(key, null)
   } catch {}
 }
 
