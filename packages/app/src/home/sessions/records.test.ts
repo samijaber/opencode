@@ -13,7 +13,7 @@ const session = (id: string, directory: string, projectID: string) =>
   }) as SessionInfo
 
 describe("buildHomeSessionRecords", () => {
-  const opened = { id: "project-a", worktree: "/repo/a", expanded: true } as LocalProject
+  const opened = { id: "project-a", worktree: "/repo/a" } as LocalProject
   const sessions = [session("a", "/repo/a", "project-a"), session("b", "/repo/b", "project-b")]
 
   test("includes sessions outside added projects when unfiltered", () => {
@@ -24,18 +24,17 @@ describe("buildHomeSessionRecords", () => {
     })
 
     expect(records.map((record) => record.session.id)).toEqual(["a", "b"])
-    expect(records[1]?.project).toMatchObject({ id: "project-b", worktree: "/repo/b", expanded: false })
+    expect(records[1]?.project).toMatchObject({ id: "project-b", worktree: "/repo/b" })
   })
 
   test("filters sessions when a project is selected", () => {
     const records = buildHomeSessionRecords({
-      sessions: () => [...sessions, session("worktree", "/unloaded/worktree", "project-a")],
+      sessions: () => sessions,
       projectDirectories: () => ["/repo/a"],
-      projectID: () => "project-a",
       projects: () => [opened],
     })
 
-    expect(records.map((record) => record.session.id)).toEqual(["a", "worktree"])
+    expect(records.map((record) => record.session.id)).toEqual(["a"])
   })
 
   test("labels a worktree session with its project before that project's inventory has loaded", () => {
@@ -50,7 +49,7 @@ describe("buildHomeSessionRecords", () => {
   })
 
   test("prefers the added project whose directory matches over a sibling entry with the same ID", () => {
-    const nested = { id: "project-a", worktree: "/repo/a/packages/app", expanded: true } as LocalProject
+    const nested = { id: "project-a", worktree: "/repo/a/packages/app" } as LocalProject
 
     const records = buildHomeSessionRecords({
       sessions: () => [session("n", "/repo/a/packages/app", "project-a")],

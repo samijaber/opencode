@@ -30,7 +30,6 @@ export type UiI18nSource = {
 }
 
 export type UiI18n = UiI18nSource & {
-  relativeTime: (timestamp: number) => string
   /** Preserve runtime-generated English copy while using the keyed dictionary for every other locale. */
   tDynamic: (key: UiI18nOrdinaryKey, source: string, params?: UiI18nParams) => string
   list: (items: readonly string[]) => string
@@ -52,6 +51,7 @@ export function pluralCategory(locale: string, count: number): UiPluralCategory 
 }
 
 export function pluralKey(key: UiI18nPluralKey, category: UiPluralCategory) {
+  // SAFETY: `PluralKey` names a base whose `.one`/`.other` forms exist, so `${key}.${category}` is a lookup key.
   return `${key}.${category}` as UiI18nPluralLookupKey
 }
 
@@ -74,7 +74,7 @@ export function localizedListSeparator(locale: string, index: number, count: num
     .join("")
 }
 
-function resolveTemplate(text: string, params?: UiI18nParams) {
+export function resolveTemplate(text: string, params?: UiI18nParams) {
   if (!params) return text
 
   return text.replace(/{{\s*([^}]+?)\s*}}/g, (_, rawKey) => {
@@ -88,15 +88,6 @@ function resolveTemplate(text: string, params?: UiI18nParams) {
 export function createUiI18n(source: UiI18nSource): UiI18n {
   return {
     ...source,
-    relativeTime: (timestamp) => {
-      const minutes = Math.floor(Math.max(0, Date.now() - timestamp) / 60_000)
-
-      if (minutes < 1) return source.t("ui.time.justNow")
-      if (minutes < 60) return source.plural("ui.time.minutesAgo", minutes)
-      if (minutes < 1440) return source.plural("ui.time.hoursAgo", Math.floor(minutes / 60))
-
-      return source.plural("ui.time.daysAgo", Math.floor(minutes / 1440))
-    },
     tDynamic: (key, value, params) =>
       source.locale().toLowerCase().split("-")[0] === "en" ? resolveTemplate(value, params) : source.t(key, params),
     // English tool labels intentionally use comma-only lists; the animated count labels use the same punctuation.
@@ -116,6 +107,7 @@ export function createUiI18n(source: UiI18nSource): UiI18n {
 const fallbackSource: UiI18nSource = {
   locale: () => "en",
   t: (key, params) => {
+    // SAFETY: the fallback source only translates keys from the UI dictionary; any other key falls back to itself.
     const value = en[key as UiI18nKey] ?? String(key)
 
     return resolveTemplate(value, params)
@@ -123,6 +115,7 @@ const fallbackSource: UiI18nSource = {
   plural: (key, count, params) =>
     fallback.pluralForm!(key, pluralCategory(fallback.locale(), count), { ...params, count }),
   pluralForm: (key, category, params) => {
+    // SAFETY: locale keys are a subset of the dictionary keys, and every value is a string.
     const values = en as Partial<Record<UiI18nLocaleKey, string>>
     const value = values[pluralKey(key, category)] ?? values[`${key}.other`] ?? `${key}.other`
 

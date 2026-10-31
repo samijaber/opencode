@@ -7,7 +7,10 @@
   "workers_dev": false,
   "preview_urls": false,
   // Keep the existing DNS, hostname-based Access policy, tunnel and authenticated gateway.
-  "routes": [{ "pattern": "opencode.samijaber.com/*", "zone_name": "samijaber.com" }],
+  "routes": [
+    { "pattern": "opencode.samijaber.com/*", "zone_name": "samijaber.com" },
+    { "pattern": "hub.samijaber.com/*", "zone_name": "samijaber.com" },
+  ],
   "assets": {
     "directory": "../../packages/app/dist",
     "binding": "ASSETS",

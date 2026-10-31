@@ -1,6 +1,6 @@
 import { createMemo, Index, Show, startTransition } from "solid-js"
 import { Key } from "@solid-primitives/keyed"
-import { RelativeTime } from "@opencode/ui/relative-time"
+import { getRelativeTime } from "@/shell/time"
 import { useGlobal, useServerCtx } from "@/runtime/server/runtime"
 import { ServerConnection, useServers } from "@/runtime/server/registry"
 import { useLayout } from "@/shell/state/layout"
@@ -8,9 +8,12 @@ import { useTabs, type Tab } from "@/shell/tabs/tabs"
 import { useLanguage } from "@/runtime/i18n/language"
 import { createRecentSessionIndex } from "@/home/sessions/query"
 import { buildHomeSessionRecords } from "@/home/sessions/records"
-import { groupSessions } from "@/home/sessions/groups"
+import { groupSessions } from "@/home/sessions/controller"
 import { HOME_SESSION_LIMIT } from "@/home/sessions/index"
-import { SessionTabAvatar } from "@/shell/layout/session-tab-avatar"
+import { SessionTabAvatarView } from "@/shell/layout/session-tab-avatar"
+import { useSessionTabAvatarState } from "@/shell/layout/project-avatar-state"
+import { ActivityRing } from "@opencode/ui/activity-ring"
+import { SessionMergeIndicator } from "@/session/merge-indicator"
 import { sessionHref } from "@/shell/routes/session"
 import { sessionTitle } from "@/session/title"
 
@@ -31,7 +34,7 @@ export function RecentSessions(props: { currentTab?: Tab; onNavigate?: () => voi
       buildHomeSessionRecords({
         sessions: index.sessions,
         projectDirectories: () => undefined,
-        projects: () => context()?.projects.available() ?? [],
+        projects: () => context()?.projects.list() ?? [],
         resolveProject: (session) => context()?.projects.forSession(session),
       }).slice(0, HOME_SESSION_LIMIT),
       language,
@@ -41,7 +44,8 @@ export function RecentSessions(props: { currentTab?: Tab; onNavigate?: () => voi
   return (
     <nav
       aria-label={language.t("sidebar.project.recentSessions")}
-      class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden [app-region:no-drag]"
+      data-scrollable
+      class="min-h-0 flex-1 [app-region:no-drag]"
     >
       <Show
         when={!index.load.isPending}
@@ -66,52 +70,64 @@ export function RecentSessions(props: { currentTab?: Tab; onNavigate?: () => voi
                 {group().title}
               </h2>
               <Key each={group().sessions} by={(record) => record.session.id}>
-                {(record) => (
-                  <a
-                    href={sessionHref(ServerConnection.key(connection()!), record().session.id)}
-                    aria-label={sessionTitle(record().session.title)}
-                    aria-current={
-                      props.currentTab?.type === "session" &&
-                      props.currentTab.sessionId === record().session.id &&
-                      props.currentTab.server === ServerConnection.key(connection()!)
-                        ? "page"
-                        : undefined
-                    }
-                    class="flex h-9 min-w-0 items-center gap-2 rounded-[6px] px-2 text-13-regular text-v2-text-text-base hover:bg-v2-background-bg-layer-02 focus-visible:outline-none focus-visible:bg-v2-background-bg-layer-02 aria-[current=page]:bg-v2-background-bg-layer-02"
-                    title={`${sessionTitle(record().session.title)} · ${record().projectName}`}
-                    onClick={(event) => {
-                      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
-                      event.preventDefault()
-                      const conn = connection()
-                      if (!conn) return
-                      const ctx = global.ensureServerCtx(conn)
-                      ctx.data.session.remember(record().session)
-                      ctx.projects.open(record().project.worktree)
-                      ctx.projects.touch(record().project.worktree)
-                      void startTransition(() => {
-                        tabs.select(
-                          tabs.addSessionTab({ server: ServerConnection.key(conn), sessionId: record().session.id }),
-                        )
-                        props.onNavigate?.()
-                      })
-                    }}
-                  >
-                    <SessionTabAvatar
-                      project={record().project}
-                      directory={record().session.location.directory}
-                      sessionId={record().session.id}
-                      server={ServerConnection.key(connection()!)}
-                      snapshot={record().session}
-                    />
-                    <span dir="auto" class="min-w-0 flex-1 truncate text-start">
-                      {sessionTitle(record().session.title)}
-                    </span>
-                    <RelativeTime
-                      timestamp={record().session.time.updated}
-                      class="shrink-0 whitespace-nowrap text-11-medium text-v2-text-text-muted"
-                    />
-                  </a>
-                )}
+                {(record) => {
+                  const status = useSessionTabAvatarState(
+                    () => (connection() ? ServerConnection.key(connection()!) : undefined),
+                    () => record().session.id,
+                    () => true,
+                    () => record().session,
+                  )
+                  return (
+                    <a
+                      href={sessionHref(ServerConnection.key(connection()!), record().session.id)}
+                      aria-label={sessionTitle(record().session.title)}
+                      aria-current={
+                        props.currentTab?.type === "session" &&
+                        props.currentTab.sessionId === record().session.id &&
+                        props.currentTab.server === ServerConnection.key(connection()!)
+                          ? "page"
+                          : undefined
+                      }
+                      class="flex min-h-11 min-w-0 items-center gap-2 rounded-[6px] px-2 text-13-regular text-v2-text-text-base hover:bg-v2-background-bg-layer-02 focus-visible:outline-none focus-visible:bg-v2-background-bg-layer-02 aria-[current=page]:bg-v2-background-bg-layer-02"
+                      title={`${sessionTitle(record().session.title)} · ${record().projectName}`}
+                      onClick={(event) => {
+                        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+                          return
+                        event.preventDefault()
+                        const conn = connection()
+                        if (!conn) return
+                        const ctx = global.ensureServerCtx(conn)
+                        ctx.data.session.remember(record().session)
+                        ctx.projects.touch(record().project.worktree)
+                        void startTransition(() => {
+                          tabs.select(
+                            tabs.addSessionTab({ server: ServerConnection.key(conn), sessionId: record().session.id }),
+                          )
+                          props.onNavigate?.()
+                        })
+                      }}
+                    >
+                      <SessionTabAvatarView
+                        project={record().project}
+                        directory={record().session.location.directory}
+                        unread={status.unread()}
+                      />
+                      <span dir="auto" class="min-w-0 flex-1 truncate text-start">
+                        <SessionMergeIndicator
+                          server={ServerConnection.key(connection()!)}
+                          sessionID={record().session.id}
+                        />
+                        {sessionTitle(record().session.title)}
+                      </span>
+                      <Show when={status.loading()}>
+                        <ActivityRing />
+                      </Show>
+                      <span class="shrink-0 whitespace-nowrap text-11-medium text-v2-text-text-muted">
+                        {getRelativeTime(new Date(record().session.time.updated).toISOString(), language.t)}
+                      </span>
+                    </a>
+                  )
+                }}
               </Key>
             </section>
           )}

@@ -49,13 +49,11 @@ import { useDialog } from "../ui/dialog"
 import { useToast } from "../ui/toast"
 import { DialogSessionRename } from "./dialog-session-rename"
 import { Keymap } from "../context/keymap"
-import { registerOpencodeSpinner } from "./register-spinner"
+import "./spinner-renderable"
 import { SPINNER_FRAMES } from "./spinner-frames"
 import { SessionTabsRailControls, SessionTabHalfRow } from "./session-tabs-rail"
 import { createSessionMerged, SessionMergeIndicator } from "./session-merge"
 import "./title-shimmer"
-
-registerOpencodeSpinner()
 
 export const TAB_SPINNERS = {
   dots: { frames: SPINNER_FRAMES, interval: 80 },
@@ -857,7 +855,6 @@ function VerticalSessionTabs(props: {
                 () => previous()?.sessionID === activeID() && Boolean(previousStatus().attention),
                 animations,
               )
-              const indicatorWidth = 10
               let lastPreviousGlowHue: RGBA | undefined
               const previousGlowHue = () => {
                 const feedback = tabFeedbackColor(previousStatus(), theme)
@@ -992,7 +989,6 @@ function VerticalSessionTabs(props: {
                       glow={glows()}
                       outerGlow={previousGlows()}
                       color={separatorLowerPulseColor()}
-                      width={indicatorWidth}
                       outerColor={separatorUpperPulseColor()}
                       flashColor={tint(background(), theme.text.base, 0.22)}
                       outerFlashColor={tint(background(), theme.text.base, 0.18)}
@@ -1019,7 +1015,6 @@ function VerticalSessionTabs(props: {
                         glow={glows()}
                         outerGlow={false}
                         color={tint(background(), theme.text.base, 0.04)}
-                        width={indicatorWidth}
                         outerColor={tint(background(), theme.text.base, 0.006)}
                         flashColor={tint(background(), theme.text.base, 0.18)}
                         flashTail={8}
@@ -1040,7 +1035,6 @@ function VerticalSessionTabs(props: {
                         complete={complete() && !status().attention}
                         glow={glows()}
                         color={pulseColor()}
-                        width={indicatorWidth}
                         glowColor={glowColor()}
                         flashColor={flashColor()}
                         flashTail={8}
@@ -1125,7 +1119,6 @@ function VerticalSessionTabs(props: {
                         complete={complete() && !status().attention}
                         glow={glows()}
                         color={detailPulseColor()}
-                        width={indicatorWidth}
                         glowColor={detailGlowColor()}
                         glowTail={10}
                         flashColor={detailFlashColor()}

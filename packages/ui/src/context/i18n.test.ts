@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, setSystemTime, test } from "bun:test"
-import { createUiI18n, localizedListSeparator, pluralCategory, useI18n, type UiI18nSource } from "./i18n"
+import { describe, expect, test } from "bun:test"
+import { createUiI18n, localizedListSeparator, pluralCategory, resolveTemplate, type UiI18nSource } from "./i18n"
 
 const i18n = (locale: string, translated: string) => {
   const source: UiI18nSource = {
@@ -64,21 +64,26 @@ describe("localizedListSeparator", () => {
   })
 })
 
-describe("relativeTime", () => {
-  afterEach(() => setSystemTime())
+describe("resolveTemplate", () => {
+  test("fills params with optional inner spacing and repeats", () => {
+    expect(resolveTemplate("Hello {{name}}, {{ name }} and {{  other  }}", { name: "Ada", other: 2 })).toBe(
+      "Hello Ada, Ada and 2",
+    )
+  })
 
-  test.each([
-    [-60_000, "just now"],
-    [0, "just now"],
-    [59_999, "just now"],
-    [60_000, "1m ago"],
-    [3_599_999, "59m ago"],
-    [3_600_000, "1h ago"],
-    [86_399_999, "23h ago"],
-    [86_400_000, "1d ago"],
-    [1_209_600_000, "14d ago"],
-  ] as const)("formats an age of %d milliseconds as %s", (age, expected) => {
-    setSystemTime(new Date("2025-01-01T12:00:00Z"))
-    expect(useI18n().relativeTime(Date.now() - age)).toBe(expected)
+  test("stringifies numbers and booleans, including zero and false", () => {
+    expect(resolveTemplate("{{count}} {{done}}", { count: 0, done: false })).toBe("0 false")
+  })
+
+  test("returns the text untouched without params", () => {
+    expect(resolveTemplate("Hello {{name}}")).toBe("Hello {{name}}")
+  })
+
+  test("does not treat $ in a value as a replacement pattern", () => {
+    expect(resolveTemplate("file {{name}}", { name: "a$&b$1" })).toBe("file a$&b$1")
+  })
+
+  test("blanks a placeholder whose param is missing", () => {
+    expect(resolveTemplate("a {{missing}} b", { other: "x" })).toBe("a  b")
   })
 })

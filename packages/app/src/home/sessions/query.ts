@@ -1,12 +1,9 @@
 import { createMemo, type Accessor } from "solid-js"
-import { skipToken, useQuery } from "@tanstack/solid-query"
-import type { SessionInfo } from "@opencode/client/promise"
+import { useQuery } from "@tanstack/solid-query"
 import type { ServerCtx } from "@/runtime/server/runtime"
 import type { ServerConnection } from "@/runtime/server/registry"
-import { HOME_SESSION_LIMIT, loadHomeSessionIndex, mergeHomeSessionIndex, retainHomeSessions } from "./index"
-
-// Home and the sidebar share a query cache and the same live removal/archival overlay.
-const selectSessions = (sessions: SessionInfo[]) => () => sessions
+import { HOME_SESSION_LIMIT, mergeHomeSessionIndex, retainHomeSessions } from "./index"
+import { homeSessionsQuery } from "./queries"
 
 export function createRecentSessionIndex(
   context: Accessor<ServerCtx | undefined>,
@@ -16,16 +13,8 @@ export function createRecentSessionIndex(
     const ctx = context()
 
     return {
-      queryKey: ["home-sessions", connection()] as const,
+      ...homeSessionsQuery(connection(), ctx),
       enabled: !!ctx && ctx.sdk.connection.status() === "connected",
-      queryFn: ctx
-        ? ({ signal }) => loadHomeSessionIndex((input, options) => ctx.sdk.api.session.list(input, options), signal)
-        : skipToken,
-      retry: false,
-      staleTime: 30_000,
-      refetchOnMount: true,
-      refetchOnReconnect: true,
-      select: selectSessions,
     }
   })
 

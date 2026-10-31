@@ -1,34 +1,35 @@
 # Sami's OpenCode web build
 
-The `session-activity` branch of <https://github.com/samijaber/opencode> adds an always-visible **Session activity** button above the composer. It opens a bottom sheet with nested subagents, shell commands, permission/question waits, recent failures and completions. Open a session or read/paginate command output directly from the sheet.
+The custom build follows upstream `dev` (2.2.5, `8cfea1086cc87faf1d555f46b66a2afdd81a02ab`, checked October 31, 2026). Prefer upstream behavior over maintaining duplicate implementations.
 
-Running work has a distinct bordered section with a count. Task titles and parent labels truncate to one line; the full command is available in its scrollable output view. Recently finished work is separated below a divider and starts collapsed. Its heading toggles the list without changing running work.
+Upstream now owns project discovery, live subagent/shell activity and message timestamp presentation. The old custom **Session activity** sheet is retired rather than layered over upstream's activity controls. Its separate completed-command history is not identical to upstream and is no longer provided as a second sheet.
 
-Home and the new-session project picker include known server projects, not just folders opened in this browser. The inventory matches Settings and respects explicitly closed projects. **All projects** resets the Home filter on desktop and in the mobile project dropdown; session search then spans projects. Project filters include sessions from worktrees whose inventories have not loaded yet.
+The retained additions are full historical recents in the vertical sidebar/mobile drawer, native touch scrolling without drag-to-reorder interception, and merged-branch indicators. Recent sessions include conversations without open tabs and use the upstream Home query cache. Upstream's experimental Inbox mode is unchanged. Desktop tab reordering is unchanged.
 
-The vertical sidebar and mobile tab drawer keep open tabs above a recent-session list grouped into **Today**, **Yesterday**, and **Older**, using the same cached index, live updates, ordering, and date-group rules as Home. Recent sessions include conversations without open tabs. The mobile drawer scrolls open tabs and recent sessions together, disables tab reordering so row swipes scroll naturally, and keeps footer actions pinned with 44px touch targets; selecting a recent session closes the drawer. Desktop tab reordering is unchanged. Home, Settings, the composer project picker, and session palettes use the shared server project inventory. Discovery no longer excludes repositories just because their path contains `opencode-test`. These changes live in `packages/app`, which both the web and Electron desktop renderers build; a web deployment does not update an installed desktop app.
+All work that was uncommitted before this update is retained in `02ad6950ee`. The merged source includes its conversation-recency and shared-read-marker fixes; the mobile changes are adapted to the new upstream tab components. A frontend-only deployment does not install the custom backend or change the installed desktop app.
 
 ## Hosting
 
-`opencode-sami-web` serves `packages/app/dist` on the Worker **route** `opencode.samijaber.com/*`. API requests, uploads and WebSockets pass through to the existing tunnel and authenticated local gateway. SSE responses are streamed. The existing Cloudflare Access application protects the hostname; workers.dev and preview URLs are disabled. The Worker stores no server password.
+`opencode-sami-web` serves the same `packages/app/dist` on the Worker **routes** `opencode.samijaber.com/*` and `hub.samijaber.com/*`. Hub adds the existing application navigation and retains its manifest/network-only service worker. `/flow`, `/verification`, their subpaths, Hub assets and aliases continue to the existing gateway. API requests, uploads and WebSockets pass through unchanged; SSE remains streaming. The existing Cloudflare Access applications protect both hostnames; workers.dev and preview URLs are disabled. The Worker stores no server password.
 
-The OpenCode backend and Flow gateway keep running independently. Deploying this frontend does not restart either service. The initial frontend base is upstream `83c5abbbe33df58d2ba868e7bdf2b5da558774be` (2.0.31); the live backend was 2.0.30.
+The OpenCode backend and Flow gateway run independently. Deploying this frontend restarts neither. Hub consumes the iOS top safe-area inset once; its embedded OpenCode titlebar must not reserve the status-bar inset again. The shell's colors and navigation follow the installed Flow gateway and Iradeh design tokens.
 
 ## Update
 
-Use Bun 1.4.2 through mise; prefix local commands with `mise exec bun@1.4.2 --` when Bun is not on the shell's PATH.
+Use the upstream-pinned Bun 1.4.4 through mise; prefix local commands with `mise exec bun@1.4.4 --` when needed.
 
 ```sh
-git fetch origin dev:refs/remotes/origin/dev
+git fetch origin refs/heads/dev:refs/remotes/origin/dev
 git switch session-activity
-git rebase origin/dev
+git merge origin/dev
 bun install --frozen-lockfile
 bun run check
 cd packages/app
-bun test --conditions=solid --preload ./happydom.ts ./src/session/activity/model.test.ts
-PLAYWRIGHT_BUILD=1 bunx playwright test e2e/regression/subagent-child-navigation.spec.ts --workers=1 --retries=0
+PLAYWRIGHT_BUILD=1 bunx playwright test e2e/regression/tabs.spec.ts e2e/regression/home.spec.ts --workers=1 --retries=0
 cd ../../services/sami-web
+bun run test
 bun run build
+bunx wrangler deploy --dry-run
 bun run deploy
 ```
 
@@ -51,18 +52,22 @@ Verify the deployed revision, session activity, navigation, output, refresh/reco
 
 ## Rollback
 
-To roll back only the custom frontend, run `bunx wrangler deployments list`, then `bunx wrangler rollback <previous-version-id>` from this directory. To return to OpenCode's bundled upstream UI, remove the `opencode.samijaber.com/*` route from `opencode-sami-web` in Cloudflare Workers routes. The existing tunnel DNS and Access policy remain in place, so requests resume going directly to the gateway. Refresh the phone tab afterward.
+To roll back only the custom frontend, run `bunx wrangler deployments list`, then `bunx wrangler rollback <previous-version-id>` from this directory. To return a hostname to the backend's bundled UI, remove its route from this config and deploy through the same owner route. Keep DNS, Access and the tunnel unchanged. Refresh the phone tab afterward.
 
 ## Data and limits
 
-- Counts use structured session, permission, form and shell snapshots/events, never reasoning text. Descendant discovery follows paginated family reads recursively.
-- The connection layer reconnects after phone suspension/network loss. The panel reloads inventories before presenting fresh counts; unknown status is never reported as success.
-- The backend lists **running shells only**. This frontend remembers observed commands in per-server, per-session browser storage (all active/unconfirmed commands and the latest 32 terminal records), and rechecks missing active commands with `shell.get`. The sheet shows the latest eight terminal results. Output is fetched only on demand and is not persisted.
+- Upstream owns live activity and shell output; this build no longer maintains a second browser-side command-history index.
 - On first opening a session, the panel pages through its structured tool records and completion notices to recover detached shells absent from the live inventory. Later refreshes resume from a browser-persisted checkpoint. Only task metadata is retained; the visible timeline is not expanded by this scan. Descendant live inventories and session outcomes remain server-backed.
 - Recorded jobs with no live status appear as **unconfirmed background tasks**, rather than disappearing or being declared running/successful. When output is unavailable, **Open original call** loads the older timeline and reveals the command. Historical completed commands are not a complete shell archive.
 - A session's elapsed time is its age from creation, not a precise measurement of active execution time.
 
 ## Verification
+
+### October 31 upstream/Hub integration
+
+Worker routing, streaming, host rejection, shared bundles and Hub manifests are covered by `test/routing.test.ts`. `test/shell-layout.test.ts` uses Chromium's actual safe-area override to check zero duplicate padding with 0px and 59px status-bar insets. This is browser emulation, not physical-iPhone evidence. The tab keeper covers historical recents, merged badges and native touch scrolling.
+
+The notes below describe earlier revisions, not acceptance evidence for this update.
 
 The touch-first tab picker passes its native-touch scroll/switch/close regression ten times at five-worker concurrency and the repository-wide `bun run check`. The full 23-case tabs keeper passes 21 cases; the two failures are the previously documented inactive-tab transcript request count and macOS side-tab shortcut mismatch. The touch regression fails on the previous picker.
 

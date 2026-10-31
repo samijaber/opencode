@@ -25,7 +25,7 @@ const PullRequests = Schema.fromJsonString(
 )
 
 export interface Interface {
-  readonly observe: (session: Session.Info) => Effect.Effect<void>
+  readonly observe: (session: Session.Info, options?: { refresh: boolean }) => Effect.Effect<void>
   readonly get: (session: Session.Info) => Effect.Effect<SessionBranch.Merge>
 }
 
@@ -58,7 +58,7 @@ const layer = Layer.effect(
           Effect.orElseSucceed(() => undefined),
         )
     })
-    const git = (directory: string, args: string[]) => run(gitExecutable, ["--no-optional-locks", ...args], directory)
+    const git = (directory: string, args: string[]) => run(gitExecutable(), ["--no-optional-locks", ...args], directory)
     const inspect = Effect.fnUntraced(function* (directory: string): Effect.fn.Return<SessionBranch.Info | undefined> {
       const name = yield* git(directory, ["symbolic-ref", "--quiet", "--short", "HEAD"])
       if (!name) return
@@ -94,15 +94,21 @@ const layer = Layer.effect(
       }
     })
     const directories = yield* Cache.make({ capacity: 256, timeToLive: "30 seconds", lookup: inspect })
-    const observe = Effect.fn("SessionMerge.observe")(function* (session: Session.Info) {
+    const observe = Effect.fn("SessionMerge.observe")(function* (
+      session: Session.Info,
+      options?: { refresh: boolean },
+    ) {
       // Re-read after taking the lock: simultaneous title consumers must not record duplicate facts.
       yield* Effect.gen(function* () {
         const current = yield* store.get(session.id)
         if (!current) return
-        const next = yield* inspect(current.location.directory)
+        // Creation reuses the short-lived directory inventory; execution boundaries explicitly refresh it.
+        const next = yield* options?.refresh === false
+          ? Cache.get(directories, current.location.directory)
+          : inspect(current.location.directory)
         if (!next || JSON.stringify(next) === JSON.stringify(current.branch)) return
         yield* bus.publish(SessionEvent.BranchUpdated, { sessionID: current.id, branch: next })
-        yield* Cache.invalidate(directories, current.location.directory)
+        if (options?.refresh !== false) yield* Cache.invalidate(directories, current.location.directory)
       }).pipe(Semaphore.withPermit(observations))
     })
     const check = Effect.fn("SessionMerge.check")(function* (encoded: string): Effect.fn.Return<SessionBranch.Merge> {
@@ -110,16 +116,16 @@ const layer = Layer.effect(
         Effect.orDie,
       )
       const args = [`--git-dir=${branch.repository}`]
-      const tip = yield* run(gitExecutable, [...args, "rev-parse", "--verify", `refs/heads/${branch.name}^{commit}`])
+      const tip = yield* run(gitExecutable(), [...args, "rev-parse", "--verify", `refs/heads/${branch.name}^{commit}`])
       const commit = tip ?? branch.commit
       const details = { branch: branch.name, target: branch.target }
       if (branch.start === commit) return { state: "unmerged", ...details }
-      const remote = yield* run(gitExecutable, [...args, "config", "--get", "remote.origin.url"])
+      const remote = yield* run(gitExecutable(), [...args, "config", "--get", "remote.origin.url"])
       const ref = remote ? `refs/remotes/origin/${branch.target}` : `refs/heads/${branch.target}`
-      const target = yield* run(gitExecutable, [...args, "rev-parse", "--verify", `${ref}^{commit}`])
+      const target = yield* run(gitExecutable(), [...args, "rev-parse", "--verify", `${ref}^{commit}`])
       // A freshly-created branch points at main too; that is not evidence of a merge.
       if (target && branch.start && branch.start !== commit) {
-        const ancestor = yield* run(gitExecutable, [...args, "merge-base", "--is-ancestor", commit, target])
+        const ancestor = yield* run(gitExecutable(), [...args, "merge-base", "--is-ancestor", commit, target])
         if (ancestor !== undefined) return { state: "merged", ...details }
       }
       if (!remote) return { state: target ? "unmerged" : "unknown", ...details }
