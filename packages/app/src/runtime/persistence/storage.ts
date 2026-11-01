@@ -8,6 +8,8 @@ import { pathKey } from "@/workspaces/path-key"
 import { ScopedKey, ServerScope } from "@/runtime/server/scope"
 import { persistStore } from "./persist"
 import { Persistence } from "./schema"
+import { notifyStorageWrite } from "@opencode/util/storage-events"
+import { isSharedPreference } from "./shared"
 
 type InitType = Promise<string | null> | string | null
 
@@ -185,6 +187,7 @@ function write(storage: Storage, key: string, value: string) {
   try {
     storage.setItem(key, value)
     cacheSet(key, value)
+    notifyStorageWrite(key, value)
 
     return true
   } catch (error) {
@@ -196,6 +199,7 @@ function write(storage: Storage, key: string, value: string) {
     cacheDelete(key)
     storage.setItem(key, value)
     cacheSet(key, value)
+    notifyStorageWrite(key, value)
 
     return true
   } catch (error) {
@@ -431,6 +435,7 @@ function localStorageWithPrefix(prefix: string): SyncStorage {
 
       try {
         localStorage.removeItem(name)
+        notifyStorageWrite(name, null)
       } catch {
         fallbackSet(scope)
       }
@@ -482,6 +487,7 @@ function localStorageDirect(): SyncStorage {
 
       try {
         localStorage.removeItem(key)
+        notifyStorageWrite(key, null)
       } catch {
         fallbackSet(scope)
       }
@@ -753,7 +759,22 @@ export function persisted<S extends Schema.ConstraintCodec<object, unknown>>(
     storage,
     serialize,
     deserialize: Schema.decodeUnknownSync(json),
-    sync: channel ? messageSync(channel) : undefined,
+    sync: [
+      (receive) => {
+        if (channel) messageSync(channel)[0](receive)
+        if (isDesktop || draft) return
+        const name = config.storage ? `${config.storage}:${config.key}` : config.key
+        if (!isSharedPreference(name)) return
+        const changed = (event: StorageEvent) => {
+          if (event.storageArea !== localStorage || event.key !== name) return
+          cacheDelete(name)
+          receive({ key: config.key, newValue: event.newValue, url: location.href, timeStamp: event.timeStamp })
+        }
+        window.addEventListener("storage", changed)
+        onCleanup(() => window.removeEventListener("storage", changed))
+      },
+      (key, value) => channel && messageSync(channel)[1](key, value),
+    ],
     // Drafts take the encoded document itself so large text is externalized without the store
     // re-parsing the serialized form on every save.
     write: draft

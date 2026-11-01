@@ -1,5 +1,13 @@
 import { createHash } from "node:crypto"
 
+const bridge = await Bun.build({
+  entrypoints: ["./browser/preferences.ts"],
+  target: "browser",
+  minify: true,
+})
+if (!bridge.success) throw new AggregateError(bridge.logs, "Could not build the preference bridge")
+await Bun.write("../../packages/app/dist/_opencode/preferences.js", bridge.outputs[0])
+
 // Preserve the bundled CLI's CSP, including its only permitted inline script (the theme preloader).
 // Cloudflare applies these headers to ASSETS responses before the Worker adds its revision header.
 const html = await Bun.file("../../packages/app/dist/index.html").text()

@@ -24,6 +24,12 @@ On iPhone (iOS 16.4 or newer), add Hub to the Home Screen from Safari, open that
 
 This feature needs the matching backend, not just a frontend deployment. Ask before replacing the shared server, back up the database, and use the SDK terminal handoff described below. Do not restart the Flow gateway to deploy it.
 
+### Shared browser preferences
+
+Within one browser profile, Hub imports saved settings, language, theme, layout, and open session tabs from `opencode.samijaber.com` before mounting. Changes then propagate in both directions without reloading. Hub retains its previous values in `opencode.preferences.backup.v1`; unsent changes survive reloads in `opencode.preferences.pending.v1`. Draft composers stay on their original origin, and server registrations, credentials, prompt history, and API caches are not transferred. This is browser-local sharing, not cross-device/account sync.
+
+The small `/_opencode/preferences` document on the canonical hostname uses exact-origin/source-checked messages and may be framed only by Hub. The main application still denies framing. Both existing Cloudflare Access applications remain unchanged. If canonical sign-in expires or the address is offline, Hub falls back to local settings rather than blocking startup; open the canonical address to sign in again. Refresh both addresses once after installing this update.
+
 ## Update
 
 Use the upstream-pinned Bun 1.4.4 through mise; prefix local commands with `mise exec bun@1.4.4 --` when needed.

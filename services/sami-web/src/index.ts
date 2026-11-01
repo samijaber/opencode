@@ -22,6 +22,18 @@ self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));`
         },
       )
     }
+    if (!hub && url.pathname === "/_opencode/preferences" && request.method === "GET") {
+      // Only this storage bridge may be framed by Hub. The application itself retains X-Frame-Options: DENY.
+      return new Response('<!doctype html><script type="module" src="/_opencode/preferences.js"></script>', {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "private, no-store",
+          "referrer-policy": "no-referrer",
+          "x-content-type-options": "nosniff",
+          "content-security-policy": "default-src 'none'; script-src 'self'; frame-ancestors https://hub.samijaber.com",
+        },
+      })
+    }
     // A route (not a Workers Custom Domain) preserves the tunnel origin. Forward the original request
     // and response without buffering: SSE, uploads, cookies and WebSocket upgrades keep their semantics.
     if (
@@ -60,6 +72,10 @@ self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));`
     if (response.headers.get("content-type")?.includes("text/html")) {
       response.headers.set("cache-control", "no-cache")
       if (hub && response.status === 200) {
+        response.headers.set(
+          "content-security-policy",
+          `${response.headers.get("content-security-policy") ?? "default-src 'self'"}; frame-src 'self' https://opencode.samijaber.com`,
+        )
         response.headers.delete("etag")
         response.headers.delete("content-length")
         return hubShell(response)
