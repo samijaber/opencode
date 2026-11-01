@@ -394,7 +394,9 @@ test("the production build precaches every deployable file except on-demand Offi
     .map((entry) => "/" + relative(fileURLToPath(directory), join(entry.parentPath, entry.name)).split(sep).join("/"))
     .filter((path) => !path.endsWith(".map") && !["/_headers", "/_redirects", "/sw.js"].includes(path))
 
-  const files = deployable.filter((path) => !onDemandAsset(path))
+  // The owner build adds this online-only, cross-origin storage bridge after Vite generates the precache.
+  // services/sami-web/test/preferences.test.ts owns its authenticated loading and message contract.
+  const files = deployable.filter((path) => !onDemandAsset(path) && path !== "/_opencode/preferences.js")
 
   expect(files.length).toBeGreaterThan(1)
   // The Office engines ship but load on demand, so a build without them would make this exclusion vacuous.

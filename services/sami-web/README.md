@@ -24,6 +24,8 @@ On iPhone (iOS 16.4 or newer), add Hub to the Home Screen from Safari, open that
 
 This feature needs the matching backend, not just a frontend deployment. Ask before replacing the shared server, back up the database, and use the SDK terminal handoff described below. Do not restart the Flow gateway to deploy it.
 
+Server tests decrypt real generated push requests and check subscription persistence, category filters, authentication and expired registrations. Touch-browser tests cover the iPhone installation hint and enrollment/test/disable flows with simulated browser permission and subscription APIs. Worker-handler tests check display arguments and session links at the browser API boundary, not OS display. A headless-Chromium display probe could not establish notification permission; it is not delivery evidence. The service-worker suite separately covers installation, updates and precaching, including the push handler asset.
+
 ### Shared browser preferences
 
 Within one browser profile, Hub imports saved settings, language, theme, layout, and open session tabs from `opencode.samijaber.com` before mounting. Changes then propagate in both directions without reloading. Hub retains its previous values in `opencode.preferences.backup.v1`; unsent changes survive reloads in `opencode.preferences.pending.v1`. Draft composers stay on their original origin, and server registrations, credentials, prompt history, and API caches are not transferred. This is browser-local sharing, not cross-device/account sync.
