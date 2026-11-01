@@ -26,7 +26,7 @@ Use the upstream-pinned Bun 1.4.4 through mise; prefix local commands with `mise
 
 ### Daily branch sync
 
-The local Dagu job definition in `maintenance/opencode-upstream.yaml` checks `anomalyco/opencode:dev` daily at 09:00 in the scheduler's local timezone. It merges into **samijaber/opencode:session-activity**, not the fork's uncustomized `dev` branch. It runs only while the Mac and local Dagu scheduler are available; it is not a GitHub-hosted job. The YAML must be registered with Dagu and its next scheduled execution confirmed before calling the schedule active; a validated definition alone is not an installed job.
+The local Dagu job definition in `maintenance/opencode-upstream.yaml` checks `anomalyco/opencode:dev` daily at 09:00 in the scheduler's local timezone. It merges into the fork's default branch, **samijaber/opencode:main**. It runs only while the Mac and local Dagu scheduler are available; it is not a GitHub-hosted job. The YAML must be registered with Dagu and its next scheduled execution confirmed before calling the schedule active; a validated definition alone is not an installed job.
 
 `maintenance/upstream-sync.ts` is the versioned runner. Its installed, bundled copy and separate bare Git repository live under `~/.local/share/opencode/upstream-sync`; the scheduler never switches or edits an active development checkout. The installed runner is deliberately not replaced by fetched upstream code. Update it explicitly after changing its policy.
 
@@ -48,7 +48,7 @@ Omit `--check` to verify and push. `--preview` verifies and retains a merge with
 
 ```sh
 git fetch origin refs/heads/dev:refs/remotes/origin/dev
-git switch session-activity
+git switch main
 git merge origin/dev
 bun install --frozen-lockfile
 bun run check
@@ -61,7 +61,7 @@ bunx wrangler deploy --dry-run
 bun run deploy
 ```
 
-Deploy from a clean, committed checkout. `deploy` records the commit in the `x-opencode-ui-revision` response header. Push verified changes to the fork's `session-activity` branch. After dependency/config changes, regenerate binding types with `bun run types`.
+Deploy from a clean, committed checkout. `deploy` records the commit in the `x-opencode-ui-revision` response header. Push verified changes to the fork's default `main` branch (`fork/main`), which preserves the custom fork history formerly on `session-activity`. Upstream integration continues from `origin/dev`. After dependency/config changes, regenerate binding types with `bun run types`.
 
 ### Merged-session indicators
 

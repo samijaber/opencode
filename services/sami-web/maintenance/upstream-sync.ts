@@ -157,7 +157,7 @@ if (import.meta.main) {
     state: path.resolve(args[1]),
     upstream: "https://github.com/anomalyco/opencode.git",
     fork: "https://github.com/samijaber/opencode.git",
-    branch: "session-activity",
+    branch: "main",
     check: args.includes("--check"),
     retry: args.includes("--retry"),
     preview: args.includes("--preview"),
