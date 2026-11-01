@@ -1,0 +1,10 @@
+description: Safely merge upstream dev into Sami's custom branch; never deploy or restart services
+type: graph
+schedule: "0 9 * * *"
+hist_retention_days: 30
+working_dir: /Users/samijaber/.local/share/opencode/upstream-sync
+env:
+  - PATH: /Users/samijaber/.local/share/mise/shims:/Users/samijaber/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+steps:
+  - id: sync
+    run: /Users/samijaber/.local/bin/mise exec bun@1.4.4 -- bun /Users/samijaber/.local/share/opencode/upstream-sync/runner.js /Users/samijaber/.local/share/opencode/upstream-sync/repository.git /Users/samijaber/.local/share/opencode/upstream-sync/state

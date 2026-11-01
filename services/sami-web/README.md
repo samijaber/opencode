@@ -36,6 +36,28 @@ The small `/_opencode/preferences` document on the canonical hostname uses exact
 
 Use the upstream-pinned Bun 1.4.4 through mise; prefix local commands with `mise exec bun@1.4.4 --` when needed.
 
+### Daily branch sync
+
+The local Dagu job definition in `maintenance/opencode-upstream.yaml` checks `anomalyco/opencode:dev` daily at 09:00 in the scheduler's local timezone. It merges into the fork's default branch, **samijaber/opencode:main**. It runs only while the Mac and local Dagu scheduler are available; it is not a GitHub-hosted job. The YAML must be registered with Dagu and its next scheduled execution confirmed before calling the schedule active; a validated definition alone is not an installed job.
+
+`maintenance/upstream-sync.ts` is the versioned runner. Its installed, bundled copy and separate bare Git repository live under `~/.local/share/opencode/upstream-sync`; the scheduler never switches or edits an active development checkout. The installed runner is deliberately not replaced by fetched upstream code. Update it explicitly after changing its policy.
+
+The job fetches both tips, makes a detached checkout, and requires a frozen install, full repository lint/typecheck, the custom Worker's complete test suite (including shared preferences on Chromium/WebKit), the four `custom ` tab keeper cases against a production build (including native touch swipes), and the custom production build. These focused browser gates do not claim the entire upstream e2e suite passes; the broader known baseline failures below remain separate. Bun 1.4.4 is pinned in the runner; review and update the runner when upstream changes its required runtime.
+
+Only a passing merge is committed and pushed, using a normal fast-forward push after rechecking the custom branch tip. There is no force-push, rebase, blanket conflict preference, automatic code editing, frontend deployment, or server/app restart. Semantic conflicts require human/agent reconciliation; the script never guesses which custom behavior to discard. Deployment remains a separate compatibility-reviewed step through the owner route.
+
+Conflicts or failed checks retain their checkout and write `status.json`. A single GitHub issue, **OpenCode upstream sync needs attention**, is created/updated with commit IDs and a short failure reason, never raw logs or credentials. Authenticated logs and daily history are at [the scheduler](https://hub.samijaber.com/verification/dags/opencode-upstream). Identical blocked commit pairs are not re-run until `--retry`; a new upstream/custom tip is checked automatically. Unexpected setup/network failures remain visible as failed Dagu jobs even if GitHub reporting is unavailable. A crash leaves the lock directory: confirm no sync is running before removing that empty lock with `rmdir`.
+
+Run the installed bundle using the same pinned mise runtime as the scheduler:
+
+```sh
+mise exec bun@1.4.4 -- bun ~/.local/share/opencode/upstream-sync/runner.js ~/.local/share/opencode/upstream-sync/repository.git ~/.local/share/opencode/upstream-sync/state --check
+```
+
+Omit `--check` to verify and push. `--preview` verifies and retains a merge without pushing or creating an issue. `--retry` starts a new isolated attempt even for an unchanged blocked pair; it never resets the earlier checkout. To pause the daily schedule, suspend **opencode-upstream** in Dagu. Resolve/retire failed checkouts explicitly; the runner does not delete failure evidence automatically.
+
+### Manual integration and deployment
+
 ```sh
 git fetch origin refs/heads/dev:refs/remotes/origin/dev
 git switch main
