@@ -38,7 +38,7 @@ Use the upstream-pinned Bun 1.4.4 through mise; prefix local commands with `mise
 
 ```sh
 git fetch origin refs/heads/dev:refs/remotes/origin/dev
-git switch session-activity
+git switch main
 git merge origin/dev
 bun install --frozen-lockfile
 bun run check
@@ -51,7 +51,7 @@ bunx wrangler deploy --dry-run
 bun run deploy
 ```
 
-Deploy from a clean, committed checkout. `deploy` records the commit in the `x-opencode-ui-revision` response header. Push verified changes to the fork's `session-activity` branch. After dependency/config changes, regenerate binding types with `bun run types`.
+Deploy from a clean, committed checkout. `deploy` records the commit in the `x-opencode-ui-revision` response header. Push verified changes to the fork's default `main` branch (`fork/main`), which preserves the custom fork history formerly on `session-activity`. Upstream integration continues from `origin/dev`. After dependency/config changes, regenerate binding types with `bun run types`.
 
 ### Merged-session indicators
 

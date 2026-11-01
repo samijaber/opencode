@@ -1,7 +1,7 @@
 - After changing the public Protocol or Server `HttpApi`, run `bun run generate` from `packages/client`. Do not edit generated client files directly.
 - Keep runtime dependencies directed from Schema to Core and Protocol, then from Core and Protocol to Server. Client runtime code may depend on Schema and Protocol but never Core or Server; `sdk` composes Client, Core, and Server.
 - This repository does not use Changesets. Do not add `.changeset` files; follow the existing release workflow instead.
-- The default branch is `dev`. Base branches and worktrees on `origin/dev`, target PRs at `dev`, and diff against `origin/dev` unless told otherwise.
+- This fork's default branch is `main` on `fork` (`samijaber/opencode`). Base custom branches and worktrees on `fork/main`, target fork PRs at `main`, and diff against `fork/main`. Upstream remains `origin/dev` (`anomalyco/opencode`); use that base and target `dev` only for upstream contributions.
 
 ## Mobile-First Web UX
 
