@@ -1,7 +1,7 @@
 export * as WebPush from "./push"
 
 import { createHash } from "node:crypto"
-import { Context, Effect, Layer, Option, Schema, Semaphore, Stream } from "effect"
+import { Context, DateTime, Effect, Layer, Option, Schema, Semaphore, Stream } from "effect"
 import { HttpClient, HttpClientRequest } from "effect/http"
 import { Bus } from "@opencode/core/bus"
 import { KV } from "@opencode/core/kv"
@@ -24,6 +24,18 @@ const definitions = [
   Permission.Event.Asked,
   Form.Event.Created,
 ] as const
+
+function preview(value: string, limit = 240) {
+  const text = value
+    .replace(/```[^\n]*\n([\s\S]*?)```/g, "$1")
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/(^|\n)\s{0,3}(?:#{1,6}\s+|[-*+]\s+)/g, "$1")
+    .replace(/\*\*|__|`/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+  const characters = Array.from(text)
+  return characters.length > limit ? characters.slice(0, limit - 1).join("") + "…" : text
+}
 
 export interface Interface {
   readonly key: () => Effect.Effect<{ publicKey: string }>
@@ -127,12 +139,50 @@ const layer = Layer.effect(
                 : event.type === "form.created"
                   ? "question"
                   : "ready"
+          const recipients = [...subscriptions.values()].filter((item) => item.events[kind])
+          if (!recipients.length) return
+          const detail = yield* Effect.gen(function* () {
+            switch (event.type) {
+              case "permission.asked":
+                return [
+                  event.data.message,
+                  [event.data.action, event.data.resources.join(", ")].filter(Boolean).join(": "),
+                ]
+                  .filter(Boolean)
+                  .join(" — ")
+              case "form.created":
+                return [
+                  event.data.form.title,
+                  ...event.data.form.fields.flatMap((field) =>
+                    field.type !== "external" && !field.hidden ? [field.title || field.description || ""] : [],
+                  ),
+                ]
+                  .filter(Boolean)
+                  .join(" — ")
+              case "session.execution.failed":
+                return event.data.error.message
+              case "session.execution.succeeded": {
+                const [message] = yield* sessions
+                  .messages({ sessionID: session.id, type: "assistant", order: "desc", limit: 1 })
+                  .pipe(Effect.catch(() => Effect.succeed([])))
+                if (message?.type !== "assistant" || !message.time.completed) return ""
+                // Never preview an older execution's answer after a control-only execution.
+                if (
+                  session.time.busy &&
+                  DateTime.toEpochMillis(message.time.completed) < DateTime.toEpochMillis(session.time.busy)
+                )
+                  return ""
+                // Only user-facing answer text: never reasoning, raw tool output or provider diagnostics.
+                return message.content.flatMap((part) => (part.type === "text" ? [part.text] : [])).join(" ")
+              }
+            }
+          })
           yield* Effect.forEach(
-            [...subscriptions.values()].filter((item) => item.events[kind]),
+            recipients,
             (item) =>
               send(item, {
-                title: item.labels[label],
-                body: (session.title ?? session.id).slice(0, 180),
+                title: preview(`${item.labels[label]} — ${session.title ?? session.id}`, 160),
+                body: preview(detail) || preview(session.title ?? session.id),
                 url: `${item.path}/session/${session.id}`,
                 tag: `opencode:${session.id}`,
               }).pipe(Effect.catch(() => Effect.logWarning("Web Push delivery failed", { sessionID: session.id }))),

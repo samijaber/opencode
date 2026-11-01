@@ -13,6 +13,11 @@ import { Push } from "@opencode/schema/push"
 import { AbsolutePath } from "@opencode/schema/schema"
 import { SessionID } from "@opencode/schema/session-id"
 import { SessionEvent } from "@opencode/schema/session-event"
+import { SessionMessage } from "@opencode/schema/session-message"
+import { Agent } from "@opencode/schema/agent"
+import { Model } from "@opencode/schema/model"
+import { Provider } from "@opencode/schema/provider"
+import { Money } from "@opencode/schema/money"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { httpClient } from "@opencode/util/effect/app-node-platform"
 import { Effect, Layer, Queue, Schema } from "effect"
@@ -150,6 +155,7 @@ it.live(
           projectID: Project.ID.global,
           location: { directory },
           slug: "child",
+          title: "Synthetic child session",
           version: "test",
         })
         yield* push.subscribe(input)
@@ -163,11 +169,67 @@ it.live(
         if (sent.body._tag === "Uint8Array")
           expect(new TextDecoder().decode(sent.body.body)).not.toContain("Synthetic session title")
         expect(payload(sent)).toEqual({
-          title: "Ready",
+          title: "Ready — Synthetic session title",
           body: "Synthetic session title",
           url: `${input.path}/session/${root}`,
           tag: `opencode:${root}`,
         })
+        const complete = Effect.fnUntraced(function* (text: string) {
+          const assistantMessageID = SessionMessage.ID.create()
+          yield* bus.publish(SessionEvent.Step.Started, {
+            sessionID: root,
+            assistantMessageID,
+            agent: Agent.ID.make("build"),
+            model: { id: Model.ID.make("synthetic"), providerID: Provider.ID.make("synthetic") },
+            started: Date.now(),
+          })
+          yield* bus.publish(SessionEvent.Reasoning.Started, { sessionID: root, assistantMessageID, ordinal: 0 })
+          yield* bus.publish(SessionEvent.Reasoning.Ended, {
+            sessionID: root,
+            assistantMessageID,
+            ordinal: 0,
+            text: "Synthetic private reasoning must not appear",
+          })
+          yield* bus.publish(SessionEvent.Text.Started, { sessionID: root, assistantMessageID, ordinal: 1 })
+          yield* bus.publish(SessionEvent.Text.Ended, { sessionID: root, assistantMessageID, ordinal: 1, text })
+          yield* bus.publish(SessionEvent.Tool.Input.Started, {
+            sessionID: root,
+            assistantMessageID,
+            id: "inspect",
+            name: "read",
+          })
+          yield* bus.publish(SessionEvent.Tool.Called, {
+            sessionID: root,
+            assistantMessageID,
+            id: "inspect",
+            input: {},
+            executed: true,
+          })
+          yield* bus.publish(SessionEvent.Tool.Success, {
+            sessionID: root,
+            assistantMessageID,
+            id: "inspect",
+            content: [{ type: "text", text: "Synthetic raw tool output must not appear" }],
+            executed: true,
+          })
+          yield* bus.publish(SessionEvent.Step.Ended, {
+            sessionID: root,
+            assistantMessageID,
+            finish: "stop",
+            cost: Money.USD.make(0),
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          })
+          yield* bus.publish(SessionEvent.Execution.Succeeded, { sessionID: root })
+          return payload(yield* Queue.take(requests))
+        })
+        expect(
+          (yield* complete(
+            "## Shipped the notification fix.\n\n**All 12 checks pass.** [View the result](https://example.test/private?token=synthetic)",
+          )).body,
+        ).toBe("Shipped the notification fix. All 12 checks pass. View the result")
+        expect((yield* complete("🟢".repeat(241))).body).toBe("🟢".repeat(239) + "…")
+        // A tool-only latest response must not reuse an older answer or expose private reasoning/tool content.
+        expect((yield* complete("")).body).toBe("Synthetic session title")
         yield* push.subscribe({ ...input, events: { agent: false, permissions: true, questions: false, errors: true } })
         yield* bus.publish(SessionEvent.Execution.Succeeded, { sessionID: root })
         yield* bus.publish(Form.Event.Created, {
@@ -181,26 +243,44 @@ it.live(
         yield* bus.publish(Permission.Event.Asked, {
           id: Permission.ID.create(),
           sessionID: child,
-          action: "edit",
-          resources: ["file.ts"],
+          action: "shell",
+          resources: ["pnpm test"],
+          message: "Allow the test command?",
         })
-        expect(payload(yield* Queue.take(requests)).title).toBe("Permission")
+        expect(payload(yield* Queue.take(requests))).toMatchObject({
+          title: "Permission — Synthetic child session",
+          body: "Allow the test command? — shell: pnpm test",
+        })
         yield* bus.publish(SessionEvent.Execution.Failed, {
           sessionID: root,
-          error: { type: "test", message: "Failed" },
+          error: {
+            type: "test",
+            message: "Provider rate limit reached. Retry in 30 seconds.",
+            response: { body: "SYNTHETIC_RAW_DIAGNOSTICS" },
+          },
         })
-        expect(payload(yield* Queue.take(requests)).title).toBe("Error")
+        expect(payload(yield* Queue.take(requests))).toMatchObject({
+          title: "Error — Synthetic session title",
+          body: "Provider rate limit reached. Retry in 30 seconds.",
+        })
         expect(Queue.sizeUnsafe(requests)).toBe(0)
         yield* push.subscribe(input)
         yield* bus.publish(Form.Event.Created, {
           form: {
             id: Form.ID.create(),
             sessionID: root,
-            title: "Question",
-            fields: [{ key: "answer", type: "string" }],
+            title: "Deployment",
+            fields: [
+              { key: "answer", type: "string", title: "Which environment should I deploy to?" },
+              { key: "hidden", type: "string", hidden: true, title: "Hidden authentication field" },
+              { key: "external", type: "external", url: "https://example.test/auth?token=hidden", title: "Sign in" },
+            ],
           },
         })
-        expect(payload(yield* Queue.take(requests)).title).toBe("Question")
+        expect(payload(yield* Queue.take(requests))).toMatchObject({
+          title: "Question — Synthetic session title",
+          body: "Deployment — Which environment should I deploy to?",
+        })
         return yield* push.key()
       }).pipe(Effect.provide(layer))
 
