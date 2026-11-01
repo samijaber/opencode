@@ -1,6 +1,7 @@
 import { createEffect, createMemo, onCleanup, untrack } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Schema } from "effect"
+import { base64Encode } from "@opencode/util/encode"
 import { isSessionNotFoundError, type SessionInfo } from "@opencode/client/promise"
 import type { ServerSDK } from "@/runtime/server/client"
 import type { Data } from "@opencode/client/solid"
@@ -378,8 +379,14 @@ export function createServerNotificationState(input: {
       unread(sessionID: string, snapshot?: SessionInfo) {
         return unread(input.data.session.get(input.data.session.root(sessionID)) ?? snapshot)
       },
-      /** Reports the session's latest idle transition to the server as viewed. */
-      markViewed: view,
+      /** Dismisses this device's alerts and reports the latest idle transition as viewed. */
+      markViewed(sessionID: string) {
+        // Request alerts can exist before the first idle transition, or after another client marked it read.
+        void platform
+          .dismissNotifications?.(`/server/${base64Encode(input.sdk.url)}/session/${sessionID}`)
+          .catch(() => {})
+        view(sessionID)
+      },
     },
     project: {
       hasUnread(directory: string) {

@@ -22,6 +22,8 @@ const clicks: Array<() => void> = []
 
 const selected: string[] = []
 
+const dismissed: string[] = []
+
 const tabs = {
   store: new Array<Tab>(),
   addSessionTab: (input: { server: ServerConnection.Key; sessionId: string }) => ({
@@ -48,7 +50,7 @@ const preferences = {
 // Each test fakes only the parts of the SDK, data store and coordinator that the notification state reads.
 const createState = (input: { sdk: object; data: object; coordinator: object }) =>
   // SAFETY: the fakes cover every member the notification state reaches in that test.
-  createServerNotificationState({ key: server, ...input } as never)
+  createServerNotificationState({ key: server, ...input, sdk: { url: "http://localhost:4096", ...input.sdk } } as never)
 
 beforeAll(async () => {
   // Fakes replace only the hooks this test controls. Spreading the real module keeps every other export, such as
@@ -64,6 +66,9 @@ beforeAll(async () => {
     ...real.platform,
     usePlatform: () => ({
       platform: "web",
+      dismissNotifications: async (url: string) => {
+        dismissed.push(url)
+      },
       notify: async (title: string, _description?: string, onClick?: () => void) => {
         alerts.push(title)
 
@@ -109,6 +114,7 @@ beforeEach(() => {
   sounds.length = 0
   clicks.length = 0
   selected.length = 0
+  dismissed.length = 0
   Object.assign(preferences, {
     autoApprove: false,
     agent: true,
@@ -354,6 +360,7 @@ test("unread state and viewing follow the server's idle and viewed watermarks", 
   setStore("viewing", "child")
   await new Promise((resolve) => setTimeout(resolve, 0))
   expect(views).toEqual([{ sessionID: "root", idle: 2 }])
+  expect(dismissed).toEqual(["/server/aHR0cDovL2xvY2FsaG9zdDo0MDk2/session/child"])
   await new Promise((resolve) => setTimeout(resolve, 300))
   expect(views).toEqual([
     { sessionID: "root", idle: 2 },
@@ -372,6 +379,15 @@ test("unread state and viewing follow the server's idle and viewed watermarks", 
   expect(views.slice(2)).toEqual([
     { sessionID: "root", idle: 6 },
     { sessionID: "other", idle: 4 },
+  ])
+  // Already-read sessions and requests before the first completion still clear this device's notifications.
+  dismissed.length = 0
+  setStore("viewing", "read")
+  setStore("sessions", "running", { id: "running", time: {}, location: { directory: "/project" } })
+  setStore("viewing", "running")
+  expect(dismissed).toEqual([
+    "/server/aHR0cDovL2xvY2FsaG9zdDo0MDk2/session/read",
+    "/server/aHR0cDovL2xvY2FsaG9zdDo0MDk2/session/running",
   ])
   dispose.dispose()
 })

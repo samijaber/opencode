@@ -60,6 +60,9 @@ type PlatformBase = {
   /** Send a system notification */
   notify(title: string, description?: string, onClick?: () => void): Promise<void>
 
+  /** Dismiss delivered notifications targeting this session route on this device. */
+  dismissNotifications?(url: string): Promise<void>
+
   /** Open a native attachment picker and read selected files sequentially (desktop only) */
   openAttachmentPickerDialog?<Value>(
     opts: OpenAttachmentPickerOptions,

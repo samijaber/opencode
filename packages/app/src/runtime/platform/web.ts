@@ -1,5 +1,6 @@
 import { createBrowserDraftStore } from "@/runtime/persistence/drafts"
 import type { Platform } from "./platform"
+import { dismissPushNotifications } from "./push"
 
 export function createWebPlatform(version: string) {
   const platform: Platform = {
@@ -14,6 +15,7 @@ export function createWebPlatform(version: string) {
       window.open(url.href, "_blank", "noopener,noreferrer")
     },
     restart: async () => window.location.reload(),
+    dismissNotifications: dismissPushNotifications,
     async notify(title, description, onClick) {
       if (!("Notification" in window)) return
 
