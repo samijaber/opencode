@@ -22,6 +22,7 @@ export function serviceWorker(directory: string) {
     workbox: {
       // Workbox runs after Sentry's upload and cleanup, so do not publish an unuploaded map.
       sourcemap: false,
+      importScripts: ["/push.js"],
       globDirectory: directory,
       clientsClaim: false,
       // Keep each open tab on its complete build until all old clients close.
@@ -40,13 +41,13 @@ export function serviceWorker(directory: string) {
             entries
               .filter((entry) => !onDemandAsset(entry.url))
               .map(async (entry) => ({
-              ...entry,
-              // A revision labels a cache entry; integrity rejects mixed deployments
-              // and HTML fallback responses instead of installing a broken build.
-              integrity: `sha256-${createHash("sha256")
-                .update(await readFile(resolve(directory, entry.url)))
-                .digest("base64")}`,
-            })),
+                ...entry,
+                // A revision labels a cache entry; integrity rejects mixed deployments
+                // and HTML fallback responses instead of installing a broken build.
+                integrity: `sha256-${createHash("sha256")
+                  .update(await readFile(resolve(directory, entry.url)))
+                  .digest("base64")}`,
+              })),
           ),
           warnings: [],
         }),

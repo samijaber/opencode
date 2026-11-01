@@ -3,7 +3,8 @@ import type { ConfigEntry, OpenCodeEvent, SessionMessageInfo, WorktreeDirectory 
 import { NO_PROVIDER, REMOTE_SERVER, SERVER, holdRoute, project, seed, session } from "../utils/app"
 import { mockMissingLocation, mockOpenCodeServer } from "../utils/mock-server"
 import { mockRemoteServer, mockWorkspace, openSession, openSettings, type WorkspaceInput } from "../utils/workspace"
-import { recordNotifications } from "../utils/notifications"
+import { mockWebPush, recordNotifications } from "../utils/notifications"
+import type { Push } from "@opencode/schema/push"
 import { installSseTransport } from "../utils/sse-transport"
 
 const directory = "C:/Projects/settings-demo"
@@ -70,6 +71,56 @@ test("settings has its own route and returns through app history", async ({ page
   await home.click()
   await expect(page).toHaveURL("/")
   await expect(settings).toBeHidden()
+})
+
+test.describe("iPhone background notifications", () => {
+  test.use({ isMobile: true, hasTouch: true })
+
+  test("iPhone push setup enables this device, saves independent filters, tests delivery and disables after reload", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await mockWebPush(page, { standalone: true })
+    const registrations: (Push.Registration | undefined)[] = []
+    const { settings } = await open(page, { onPushSubscription: (input) => registrations.push(input) })
+    await settings.getByRole("button", { name: "Preferences", exact: true }).tap()
+    await page.getByRole("menuitemradio", { name: "Notifications", exact: true }).tap()
+    const enable = settings.getByRole("button", { name: "Enable on this device", exact: true })
+    await expect(enable).toBeEnabled()
+    await enable.tap()
+    await expect(settings.getByText("Enabled on this device", { exact: true })).toBeVisible()
+    await expect
+      .poll(() => registrations.at(-1)?.events)
+      .toEqual({ agent: true, permissions: true, questions: true, errors: false })
+    expect(registrations.at(-1)?.path).toBe(`/server/${Buffer.from(SERVER).toString("base64url")}`)
+    const questions = settings.getByRole("switch", { name: "Questions", exact: true })
+    await questions.locator("..").locator('[data-slot="switch-control"]').click()
+    await expect
+      .poll(() => registrations.at(-1)?.events)
+      .toEqual({ agent: true, permissions: true, questions: false, errors: false })
+    await settings.getByRole("button", { name: "Send test notification", exact: true }).click()
+    await expect(
+      settings.getByText("Test accepted by the push service. Check your device’s notifications.", { exact: true }),
+    ).toBeVisible()
+    await page.reload()
+    await expect(settings.getByRole("button", { name: "Disable on this device", exact: true })).toBeEnabled()
+    await settings.getByRole("button", { name: "Disable on this device", exact: true }).click()
+    await expect(settings.getByText("Not enabled on this device", { exact: true })).toBeVisible()
+    await expect.poll(() => registrations.at(-1)).toBeUndefined()
+    await expect(settings.getByRole("button", { name: "Send test notification", exact: true })).toBeHidden()
+  })
+
+  test("iPhone Safari explains Home Screen installation instead of offering unsupported push enrollment", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await mockWebPush(page, { standalone: false })
+    const { settings } = await open(page)
+    await settings.getByRole("button", { name: "Preferences", exact: true }).tap()
+    await page.getByRole("menuitemradio", { name: "Notifications", exact: true }).tap()
+    await expect(settings.getByText(/Safari’s Share → Add to Home Screen/)).toBeVisible()
+    await expect(settings.getByRole("button", { name: "Enable on this device", exact: true })).toBeHidden()
+  })
 })
 
 test("Ctrl+, opens settings as soon as the app loads", async ({ page }) => {

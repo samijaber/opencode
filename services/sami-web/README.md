@@ -14,6 +14,16 @@ All work that was uncommitted before this update is retained in `02ad6950ee`. Th
 
 The OpenCode backend and Flow gateway run independently. Deploying this frontend restarts neither. Hub consumes the iOS top safe-area inset once; its embedded OpenCode titlebar must not reserve the status-bar inset again. The shell's colors and navigation follow the installed Flow gateway and Iradeh design tokens.
 
+## Background notifications
+
+Hub's `/sw.js` is a shared, network-only worker with the push handlers in `packages/app/public/push.js`. It must not cache or substitute OpenCode HTML for Flow or Orchestrator routes. The Worker serves this script directly so the installed gateway's older worker cannot remove push support on a later update.
+
+The matching backend provides authenticated `/api/experimental/push/*` endpoints and subscribes to live session completions, failures, permissions and questions. It sends encrypted Web Push through the browser's provider even when no app page is open. VAPID keys and device registrations persist in the existing database's key-value storage; no new infrastructure or migration is required. Notification bodies contain the session title, not its messages or tool output. Expired device registrations are removed. Push is opt-in per device and covers all sessions, not only open tabs; child completions do not produce separate alerts.
+
+On iPhone (iOS 16.4 or newer), add Hub to the Home Screen from Safari, open that icon, then use **Settings → Notifications → Background notifications → Enable on this device** and allow the system prompt. Enabling also turns on Agent completion alerts; the other category choices remain unchanged. **Send test notification** checks provider acceptance; it does not prove that iOS displayed it. Physical-iPhone delivery, Focus settings and tapping the alert require an actual device check.
+
+This feature needs the matching backend, not just a frontend deployment. Ask before replacing the shared server, back up the database, and use the SDK terminal handoff described below. Do not restart the Flow gateway to deploy it.
+
 ## Update
 
 Use the upstream-pinned Bun 1.4.4 through mise; prefix local commands with `mise exec bun@1.4.4 --` when needed.

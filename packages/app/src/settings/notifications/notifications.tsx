@@ -5,6 +5,7 @@ import { useLanguage } from "@/runtime/i18n/language"
 import { useSettings } from "@/settings/model"
 import { SettingsList } from "@/settings/list"
 import { SettingsRow } from "@/settings/row"
+import { SettingsPush } from "./push"
 import {
   createSoundSettingsController,
   soundOptions,
@@ -78,6 +79,7 @@ export const SettingsNotifications: Component = () => {
       </div>
 
       <div class="settings-tab-body settings-tab-body--sectioned">
+        <SettingsPush />
         <div class="settings-section">
           <h3 class="settings-section-title">{language.t("settings.general.section.notifications")}</h3>
           <SettingsList>

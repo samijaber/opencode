@@ -3,6 +3,7 @@ import type { OpenCodeEvent, SessionMessageInfo } from "@opencode/client/promise
 import { Permission } from "@opencode/schema/permission"
 import { Model } from "@opencode/schema/model"
 import { Worktree } from "@opencode/schema/worktree"
+import { Push } from "@opencode/schema/push"
 import { Duration, Effect, Layer, Option, Predicate, Schema } from "effect"
 import { HttpRouter, HttpServer, HttpServerResponse } from "effect/http"
 import { HttpApiBuilder, HttpApiSchema } from "effect/http-api"
@@ -46,6 +47,7 @@ export type MockFileContent =
   | undefined
 
 export interface MockServerConfig {
+  onPushSubscription?: (input: Push.Registration | undefined) => void
   server?: string
   // The machine name `/api/info` reports; omitted like a server that predates it.
   hostname?: string
@@ -608,6 +610,7 @@ function mockHandlers(
   const noContent = Effect.succeed(HttpApiSchema.NoContent.make())
   const delay = config.messageDelay === undefined ? Effect.void : Effect.sleep(Duration.millis(config.messageDelay))
   const configEntries = config.configEntries ?? []
+  const pushSubscriptions = new Map<string, Push.Registration>()
 
   // Without a persistent PTY config the mock is a server with a working daemon and no terminals, since the desktop
   // lists a session's terminals whenever its side panel renders.
@@ -661,6 +664,21 @@ function mockHandlers(
 
   return HttpApiBuilder.group(MockApi, "mock", (handlers) =>
     handlers
+      .handle("pushKey", () => Effect.succeed({ publicKey: "B" + "a".repeat(86) }))
+      .handle("pushStatus", ({ payload }) => Effect.succeed({ enabled: pushSubscriptions.has(payload.endpoint) }))
+      .handle("pushSubscribe", ({ payload }) =>
+        Effect.sync(() => {
+          pushSubscriptions.set(payload.subscription.endpoint, payload)
+          config.onPushSubscription?.(payload)
+        }),
+      )
+      .handle("pushUnsubscribe", ({ payload }) =>
+        Effect.sync(() => {
+          pushSubscriptions.delete(payload.endpoint)
+          config.onPushSubscription?.(undefined)
+        }),
+      )
+      .handle("pushTest", () => noContent)
       .handleRaw("event", () => {
         const events = config.events?.()
         const retry = config.eventRetry === undefined ? "" : `retry: ${config.eventRetry}\n\n`

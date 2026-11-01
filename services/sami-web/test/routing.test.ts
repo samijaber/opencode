@@ -50,7 +50,6 @@ test.each([
   "/verification",
   "/verification/dag-runs/example",
   "/verification/api/logs",
-  "/sw.js",
   "/site.webmanifest",
   "/hub/icon.png",
   "/opencode",
@@ -69,6 +68,20 @@ test.each([
   expect(fixture.fetch).not.toHaveBeenCalled()
   expect(response.headers.get("x-origin")).toBe("synthetic")
   expect(await response.text()).toBe("origin")
+})
+
+test("Hub shares a network-only push worker across OpenCode, Flow and Orchestrator", async () => {
+  const fixture = assets()
+  const origin = spyOn(globalThis, "fetch")
+  const response = await worker.fetch(new Request("https://hub.samijaber.com/sw.js"), fixture.env)
+  expect(response.headers.get("content-type")).toBe("text/javascript")
+  expect(response.headers.get("cache-control")).toBe("no-store")
+  const script = await response.text()
+  expect(script).toContain("importScripts('/push.js')")
+  expect(script).toContain("self.clients.claim()")
+  expect(script).not.toContain("fetch")
+  expect(origin).not.toHaveBeenCalled()
+  expect(fixture.fetch).not.toHaveBeenCalled()
 })
 
 test("API events remain streaming and mutations are not answered by static assets", async () => {

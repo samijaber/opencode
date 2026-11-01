@@ -44,6 +44,7 @@ const fixture = test.extend<{ site: Site }, { builds: Record<string, Record<stri
               "public/large.bin": Buffer.alloc(2 * 1024 * 1024 + 1, version === "old" ? 1 : 2),
               "public/_headers": "/*\n  Cache-Control: no-cache",
               "public/_redirects": "/* /index.html 200",
+              "public/push.js": await readFile(new URL("../../public/push.js", import.meta.url)),
             }).map(([path, contents]) => writeFile(join(root, path), contents)),
           )
           await build({
@@ -286,7 +287,9 @@ fixture(
         replacement.evaluate(() => {
           // This runs in the service worker, whose global scope holds its registration.
           const registration =
-            "registration" in self && self.registration instanceof ServiceWorkerRegistration ? self.registration : undefined
+            "registration" in self && self.registration instanceof ServiceWorkerRegistration
+              ? self.registration
+              : undefined
 
           return { waiting: !!registration?.waiting, active: registration?.active?.state }
         }),

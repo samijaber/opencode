@@ -3,6 +3,7 @@ import { HttpApi, HttpApiEndpoint, HttpApiGroup, HttpApiSchema } from "effect/ht
 import { PersistentPty } from "@opencode/schema/persistent-pty"
 import { Pty } from "@opencode/schema/pty"
 import { Worktree } from "@opencode/schema/worktree"
+import { Push } from "@opencode/schema/push"
 
 // Handlers answer plain fixture data: undefined properties are dropped, and other non-JSON values become null.
 const Json = Schema.Json.pipe(
@@ -106,6 +107,31 @@ const PersistentPtyUpdate = Schema.Struct({
 })
 
 const Group = HttpApiGroup.make("mock")
+  .add(HttpApiEndpoint.get("pushKey", "/api/experimental/push/key", { success: Json }))
+  .add(
+    HttpApiEndpoint.post("pushStatus", "/api/experimental/push/status", {
+      payload: Schema.Struct({ endpoint: Push.Endpoint }),
+      success: Json,
+    }),
+  )
+  .add(
+    HttpApiEndpoint.put("pushSubscribe", "/api/experimental/push/subscription", {
+      payload: Push.Registration,
+      success: NoContent,
+    }),
+  )
+  .add(
+    HttpApiEndpoint.delete("pushUnsubscribe", "/api/experimental/push/subscription", {
+      payload: Schema.Struct({ endpoint: Push.Endpoint }),
+      success: NoContent,
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("pushTest", "/api/experimental/push/test", {
+      payload: Schema.Struct({ endpoint: Push.Endpoint }),
+      success: NoContent,
+    }),
+  )
   .add(HttpApiEndpoint.get("info", "/api/info", { success: Json }))
   .add(
     HttpApiEndpoint.get("event", "/api/event", {

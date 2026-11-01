@@ -4833,6 +4833,43 @@ export type ExperimentalConfigUpdateInput = { readonly shell: string | null }
 
 export type ExperimentalConfigUpdateOutput = void
 
+export type ExperimentalPushKeyOutput = { publicKey: string }
+
+export type ExperimentalPushStatusInput = { readonly endpoint: string }
+
+export type ExperimentalPushStatusOutput = { enabled: boolean }
+
+export type ExperimentalPushSubscribeInput = {
+  readonly subscription: {
+    readonly endpoint: string
+    readonly keys: { readonly p256dh: string; readonly auth: string }
+  }
+  readonly path: string
+  readonly events: {
+    readonly agent: boolean
+    readonly permissions: boolean
+    readonly questions: boolean
+    readonly errors: boolean
+  }
+  readonly labels: {
+    readonly ready: string
+    readonly question: string
+    readonly permission: string
+    readonly error: string
+    readonly test: string
+  }
+}
+
+export type ExperimentalPushSubscribeOutput = void
+
+export type ExperimentalPushUnsubscribeInput = { readonly endpoint: string }
+
+export type ExperimentalPushUnsubscribeOutput = void
+
+export type ExperimentalPushTestInput = { readonly endpoint: string }
+
+export type ExperimentalPushTestOutput = void
+
 /** @deprecated Use `ExperimentalSessionStatsInput`. Removed in the next minor. */
 export type SessionStatsInput = ExperimentalSessionStatsInput
 
@@ -4982,3 +5019,30 @@ export type ConfigUpdateInput = ExperimentalConfigUpdateInput
 
 /** @deprecated Use `ExperimentalConfigUpdateOutput`. Removed in the next minor. */
 export type ConfigUpdateOutput = ExperimentalConfigUpdateOutput
+
+/** @deprecated Use `ExperimentalPushKeyOutput`. Removed in the next minor. */
+export type PushKeyOutput = ExperimentalPushKeyOutput
+
+/** @deprecated Use `ExperimentalPushStatusInput`. Removed in the next minor. */
+export type PushStatusInput = ExperimentalPushStatusInput
+
+/** @deprecated Use `ExperimentalPushStatusOutput`. Removed in the next minor. */
+export type PushStatusOutput = ExperimentalPushStatusOutput
+
+/** @deprecated Use `ExperimentalPushSubscribeInput`. Removed in the next minor. */
+export type PushSubscribeInput = ExperimentalPushSubscribeInput
+
+/** @deprecated Use `ExperimentalPushSubscribeOutput`. Removed in the next minor. */
+export type PushSubscribeOutput = ExperimentalPushSubscribeOutput
+
+/** @deprecated Use `ExperimentalPushUnsubscribeInput`. Removed in the next minor. */
+export type PushUnsubscribeInput = ExperimentalPushUnsubscribeInput
+
+/** @deprecated Use `ExperimentalPushUnsubscribeOutput`. Removed in the next minor. */
+export type PushUnsubscribeOutput = ExperimentalPushUnsubscribeOutput
+
+/** @deprecated Use `ExperimentalPushTestInput`. Removed in the next minor. */
+export type PushTestInput = ExperimentalPushTestInput
+
+/** @deprecated Use `ExperimentalPushTestOutput`. Removed in the next minor. */
+export type PushTestOutput = ExperimentalPushTestOutput

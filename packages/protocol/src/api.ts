@@ -35,6 +35,7 @@ import { WorktreeGroup } from "./groups/worktree.js"
 import { VcsGroup } from "./groups/vcs.js"
 import { MigrationGroup } from "./groups/migration.js"
 import { ConfigGroup } from "./groups/config.js"
+import { PushGroup } from "./groups/push.js"
 
 type LocationGroups<LocationId extends HttpApiMiddleware.AnyId> =
   | HttpApiGroup.AddMiddleware<typeof AgentGroup, LocationId>
@@ -95,6 +96,7 @@ type ApiGroups<
   Event extends HttpApiGroup.Constraint,
 > =
   | typeof ServerGroup
+  | typeof PushGroup
   | typeof DebugGroup
   | typeof MigrationGroup
   | typeof WorktreeGroup
@@ -197,6 +199,7 @@ const makeApiFromGroup = <
     .add(WebSearchGroup.middleware(locationMiddleware))
     .add(UsageGroup.middleware(locationMiddleware))
     .add(ConfigGroup.middleware(locationMiddleware))
+    .add(PushGroup)
     .annotateMerge(
       OpenApi.annotations({
         title: "opencode HttpApi",

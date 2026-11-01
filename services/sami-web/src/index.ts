@@ -5,6 +5,23 @@ export default {
     const url = new URL(request.url)
     const hub = url.hostname === "hub.samijaber.com"
     if (!hub && url.hostname !== "opencode.samijaber.com") return new Response("Not found", { status: 404 })
+    // Keep one network-only worker for all three Hub apps, adding background push without SPA caching.
+    if (hub && url.pathname === "/sw.js" && ["GET", "HEAD"].includes(request.method)) {
+      return new Response(
+        request.method === "HEAD"
+          ? null
+          : `importScripts('/push.js');
+self.addEventListener('install',()=>self.skipWaiting());
+self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));`,
+        {
+          headers: {
+            "content-type": "text/javascript",
+            "cache-control": "no-store",
+            "x-opencode-ui-revision": env.BUILD_SHA,
+          },
+        },
+      )
+    }
     // A route (not a Workers Custom Domain) preserves the tunnel origin. Forward the original request
     // and response without buffering: SSE, uploads, cookies and WebSocket upgrades keep their semantics.
     if (
@@ -17,7 +34,6 @@ export default {
           "/opencode",
           "/opencode/",
           "/site.webmanifest",
-          "/sw.js",
         ].includes(url.pathname) ||
           ["/flow/", "/verification/", "/hub/"].some((prefix) => url.pathname.startsWith(prefix)))) ||
       url.pathname === "/api" ||

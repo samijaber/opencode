@@ -2814,6 +2814,60 @@ export interface ExperimentalConfigApi<E = never> {
   readonly update: ExperimentalConfigUpdateOperation<E>
 }
 
+export type ExperimentalPushKeyOutput = { readonly publicKey: string }
+export type ExperimentalPushKeyOperation<E = never> = () => Effect.Effect<ExperimentalPushKeyOutput, E>
+
+export type ExperimentalPushStatusInput = { readonly endpoint: string }
+export type ExperimentalPushStatusOutput = { readonly enabled: boolean }
+export type ExperimentalPushStatusOperation<E = never> = (
+  input: ExperimentalPushStatusInput,
+) => Effect.Effect<ExperimentalPushStatusOutput, E>
+
+export type ExperimentalPushSubscribeInput = {
+  readonly subscription: {
+    readonly endpoint: string
+    readonly keys: { readonly p256dh: string; readonly auth: string }
+  }
+  readonly path: string
+  readonly events: {
+    readonly agent: boolean
+    readonly permissions: boolean
+    readonly questions: boolean
+    readonly errors: boolean
+  }
+  readonly labels: {
+    readonly ready: string
+    readonly question: string
+    readonly permission: string
+    readonly error: string
+    readonly test: string
+  }
+}
+export type ExperimentalPushSubscribeOutput = void
+export type ExperimentalPushSubscribeOperation<E = never> = (
+  input: ExperimentalPushSubscribeInput,
+) => Effect.Effect<ExperimentalPushSubscribeOutput, E>
+
+export type ExperimentalPushUnsubscribeInput = { readonly endpoint: string }
+export type ExperimentalPushUnsubscribeOutput = void
+export type ExperimentalPushUnsubscribeOperation<E = never> = (
+  input: ExperimentalPushUnsubscribeInput,
+) => Effect.Effect<ExperimentalPushUnsubscribeOutput, E>
+
+export type ExperimentalPushTestInput = { readonly endpoint: string }
+export type ExperimentalPushTestOutput = void
+export type ExperimentalPushTestOperation<E = never> = (
+  input: ExperimentalPushTestInput,
+) => Effect.Effect<ExperimentalPushTestOutput, E>
+
+export interface ExperimentalPushApi<E = never> {
+  readonly key: ExperimentalPushKeyOperation<E>
+  readonly status: ExperimentalPushStatusOperation<E>
+  readonly subscribe: ExperimentalPushSubscribeOperation<E>
+  readonly unsubscribe: ExperimentalPushUnsubscribeOperation<E>
+  readonly test: ExperimentalPushTestOperation<E>
+}
+
 /** @deprecated Use `ExperimentalSessionStatsInput`. Removed in the next minor. */
 export type SessionStatsInput = ExperimentalSessionStatsInput
 
@@ -3033,6 +3087,48 @@ export type ConfigUpdateOutput = ExperimentalConfigUpdateOutput
 /** @deprecated Use `ExperimentalConfigUpdateOperation`. Removed in the next minor. */
 export type ConfigUpdateOperation<E = never> = ExperimentalConfigUpdateOperation<E>
 
+/** @deprecated Use `ExperimentalPushKeyOutput`. Removed in the next minor. */
+export type PushKeyOutput = ExperimentalPushKeyOutput
+
+/** @deprecated Use `ExperimentalPushKeyOperation`. Removed in the next minor. */
+export type PushKeyOperation<E = never> = ExperimentalPushKeyOperation<E>
+
+/** @deprecated Use `ExperimentalPushStatusInput`. Removed in the next minor. */
+export type PushStatusInput = ExperimentalPushStatusInput
+
+/** @deprecated Use `ExperimentalPushStatusOutput`. Removed in the next minor. */
+export type PushStatusOutput = ExperimentalPushStatusOutput
+
+/** @deprecated Use `ExperimentalPushStatusOperation`. Removed in the next minor. */
+export type PushStatusOperation<E = never> = ExperimentalPushStatusOperation<E>
+
+/** @deprecated Use `ExperimentalPushSubscribeInput`. Removed in the next minor. */
+export type PushSubscribeInput = ExperimentalPushSubscribeInput
+
+/** @deprecated Use `ExperimentalPushSubscribeOutput`. Removed in the next minor. */
+export type PushSubscribeOutput = ExperimentalPushSubscribeOutput
+
+/** @deprecated Use `ExperimentalPushSubscribeOperation`. Removed in the next minor. */
+export type PushSubscribeOperation<E = never> = ExperimentalPushSubscribeOperation<E>
+
+/** @deprecated Use `ExperimentalPushUnsubscribeInput`. Removed in the next minor. */
+export type PushUnsubscribeInput = ExperimentalPushUnsubscribeInput
+
+/** @deprecated Use `ExperimentalPushUnsubscribeOutput`. Removed in the next minor. */
+export type PushUnsubscribeOutput = ExperimentalPushUnsubscribeOutput
+
+/** @deprecated Use `ExperimentalPushUnsubscribeOperation`. Removed in the next minor. */
+export type PushUnsubscribeOperation<E = never> = ExperimentalPushUnsubscribeOperation<E>
+
+/** @deprecated Use `ExperimentalPushTestInput`. Removed in the next minor. */
+export type PushTestInput = ExperimentalPushTestInput
+
+/** @deprecated Use `ExperimentalPushTestOutput`. Removed in the next minor. */
+export type PushTestOutput = ExperimentalPushTestOutput
+
+/** @deprecated Use `ExperimentalPushTestOperation`. Removed in the next minor. */
+export type PushTestOperation<E = never> = ExperimentalPushTestOperation<E>
+
 /** @deprecated Use `ExperimentalGenerateApi`. Removed in the next minor. */
 export type GenerateApi<E = never> = ExperimentalGenerateApi<E>
 
@@ -3044,6 +3140,9 @@ export type MigrationApi<E = never> = ExperimentalMigrationApi<E>
 
 /** @deprecated Use `ExperimentalUsageApi`. Removed in the next minor. */
 export type UsageApi<E = never> = ExperimentalUsageApi<E>
+
+/** @deprecated Use `ExperimentalPushApi`. Removed in the next minor. */
+export type PushApi<E = never> = ExperimentalPushApi<E>
 
 export interface AppApi<E = never> {
   readonly server: ServerApi<E>
@@ -3061,6 +3160,7 @@ export interface AppApi<E = never> {
     readonly migration: ExperimentalMigrationApi<E>
     readonly usage: ExperimentalUsageApi<E>
     readonly config: ExperimentalConfigApi<E>
+    readonly push: ExperimentalPushApi<E>
   }
   readonly message: MessageApi<E>
   readonly model: ModelApi<E>
@@ -3119,5 +3219,23 @@ export interface AppApi<E = never> {
   readonly usage: {
     /** @deprecated Use `client.experimental.usage.limits`. Removed in the next minor. */
     readonly limits: ExperimentalUsageLimitsOperation<E>
+  }
+
+  /** @deprecated Use `client.experimental.push`. Removed in the next minor. */
+  readonly push: {
+    /** @deprecated Use `client.experimental.push.key`. Removed in the next minor. */
+    readonly key: ExperimentalPushKeyOperation<E>
+
+    /** @deprecated Use `client.experimental.push.status`. Removed in the next minor. */
+    readonly status: ExperimentalPushStatusOperation<E>
+
+    /** @deprecated Use `client.experimental.push.subscribe`. Removed in the next minor. */
+    readonly subscribe: ExperimentalPushSubscribeOperation<E>
+
+    /** @deprecated Use `client.experimental.push.unsubscribe`. Removed in the next minor. */
+    readonly unsubscribe: ExperimentalPushUnsubscribeOperation<E>
+
+    /** @deprecated Use `client.experimental.push.test`. Removed in the next minor. */
+    readonly test: ExperimentalPushTestOperation<E>
   }
 }

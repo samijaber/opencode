@@ -26,6 +26,14 @@ export function createWebPlatform(version: string) {
 
       if (document.visibilityState === "visible" && document.hasFocus()) return
 
+      // The server already delivers these through Web Push, including when this page is suspended.
+      // Do not create a second alert from the foreground event connection.
+      if ("serviceWorker" in navigator && "PushManager" in window) {
+        const worker = await navigator.serviceWorker.getRegistration("/").catch(() => undefined)
+
+        if (await worker?.pushManager.getSubscription().catch(() => undefined)) return
+      }
+
       const notification = new Notification(title, {
         body: description ?? "",
         icon: "https://opencode.ai/favicon-96x96-v3.png",

@@ -1,6 +1,24 @@
 import { DESKTOP_NATIVE_ENGLISH } from "./desktop-native"
 
 export const dict = {
+  "settings.push.title": "Background notifications",
+  "settings.push.description":
+    "Get alerts on this device even when Hub is closed, for all sessions—not just open tabs. Enabling turns on Agent completion alerts; your other notification choices below are preserved.",
+  "settings.push.install":
+    "On iPhone or iPad, use Safari’s Share → Add to Home Screen, open Hub from that icon, then enable notifications here.",
+  "settings.push.unsupported": "Background notifications require a supported browser and a secure HTTPS connection.",
+  "settings.push.blocked":
+    "Notifications are blocked. Allow them in your device or browser notification settings, then reopen Hub.",
+  "settings.push.enabled": "Enabled on this device",
+  "settings.push.disabled": "Not enabled on this device",
+  "settings.push.enable": "Enable on this device",
+  "settings.push.disable": "Disable on this device",
+  "settings.push.test": "Send test notification",
+  "settings.push.testMessage": "Background notifications are working. Tap to open OpenCode.",
+  "settings.push.sent": "Test accepted by the push service. Check your device’s notifications.",
+  "settings.push.error":
+    "Could not update background notifications. Check your connection and that this server supports Web Push, then try again.",
+  "settings.push.retry": "Try again",
   "experiment.voiceCalls": "Voice calls",
   "voice.call": "Call",
   "voice.mute": "Mute",

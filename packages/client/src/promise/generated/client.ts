@@ -320,6 +320,15 @@ import type {
   ConfigShellsOutput,
   ExperimentalConfigUpdateInput,
   ExperimentalConfigUpdateOutput,
+  ExperimentalPushKeyOutput,
+  ExperimentalPushStatusInput,
+  ExperimentalPushStatusOutput,
+  ExperimentalPushSubscribeInput,
+  ExperimentalPushSubscribeOutput,
+  ExperimentalPushUnsubscribeInput,
+  ExperimentalPushUnsubscribeOutput,
+  ExperimentalPushTestInput,
+  ExperimentalPushTestOutput,
 } from "./types.js"
 import { ClientError } from "./client-error.js"
 
@@ -1737,6 +1746,72 @@ export function make(options: ClientOptions) {
             requestOptions,
           ),
       },
+      push: {
+        key: (requestOptions?: RequestOptions) =>
+          request<ExperimentalPushKeyOutput>(
+            {
+              method: "GET",
+              path: `/api/experimental/push/key`,
+              successStatus: 200,
+              declaredStatuses: [400, 401],
+              empty: false,
+            },
+            requestOptions,
+          ),
+        status: (input: ExperimentalPushStatusInput, requestOptions?: RequestOptions) =>
+          request<ExperimentalPushStatusOutput>(
+            {
+              method: "POST",
+              path: `/api/experimental/push/status`,
+              body: { endpoint: input["endpoint"] },
+              successStatus: 200,
+              declaredStatuses: [400, 401],
+              empty: false,
+            },
+            requestOptions,
+          ),
+        subscribe: (input: ExperimentalPushSubscribeInput, requestOptions?: RequestOptions) =>
+          request<ExperimentalPushSubscribeOutput>(
+            {
+              method: "PUT",
+              path: `/api/experimental/push/subscription`,
+              body: {
+                subscription: input["subscription"],
+                path: input["path"],
+                events: input["events"],
+                labels: input["labels"],
+              },
+              successStatus: 204,
+              declaredStatuses: [400, 401],
+              empty: true,
+            },
+            requestOptions,
+          ),
+        unsubscribe: (input: ExperimentalPushUnsubscribeInput, requestOptions?: RequestOptions) =>
+          request<ExperimentalPushUnsubscribeOutput>(
+            {
+              method: "DELETE",
+              path: `/api/experimental/push/subscription`,
+              body: { endpoint: input["endpoint"] },
+              successStatus: 204,
+              declaredStatuses: [400, 401],
+              empty: true,
+            },
+            requestOptions,
+          ),
+        test: (input: ExperimentalPushTestInput, requestOptions?: RequestOptions) =>
+          request<ExperimentalPushTestOutput>(
+            {
+              method: "POST",
+              path: `/api/experimental/push/test`,
+              body: { endpoint: input["endpoint"] },
+              successStatus: 204,
+              declaredStatuses: [400, 401, 503],
+              empty: true,
+            },
+            requestOptions,
+          ),
+      },
     },
     message: {
       list: (input: MessageListInput, requestOptions?: RequestOptions) =>
@@ -2776,6 +2851,19 @@ export function make(options: ClientOptions) {
       ...client.config,
       /** @deprecated Use `client.experimental.config.update`. Removed in the next minor. */
       update: client.experimental.config.update,
+    },
+    /** @deprecated Use `client.experimental.push`. Removed in the next minor. */
+    push: {
+      /** @deprecated Use `client.experimental.push.key`. Removed in the next minor. */
+      key: client.experimental.push.key,
+      /** @deprecated Use `client.experimental.push.status`. Removed in the next minor. */
+      status: client.experimental.push.status,
+      /** @deprecated Use `client.experimental.push.subscribe`. Removed in the next minor. */
+      subscribe: client.experimental.push.subscribe,
+      /** @deprecated Use `client.experimental.push.unsubscribe`. Removed in the next minor. */
+      unsubscribe: client.experimental.push.unsubscribe,
+      /** @deprecated Use `client.experimental.push.test`. Removed in the next minor. */
+      test: client.experimental.push.test,
     },
   }
 }

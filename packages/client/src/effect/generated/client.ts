@@ -318,6 +318,15 @@ import type {
   ConfigShellsOutput,
   ExperimentalConfigUpdateInput,
   ExperimentalConfigUpdateOutput,
+  ExperimentalPushKeyOutput,
+  ExperimentalPushStatusInput,
+  ExperimentalPushStatusOutput,
+  ExperimentalPushSubscribeInput,
+  ExperimentalPushSubscribeOutput,
+  ExperimentalPushUnsubscribeInput,
+  ExperimentalPushUnsubscribeOutput,
+  ExperimentalPushTestInput,
+  ExperimentalPushTestOutput,
 } from "../api/api.js"
 import { ClientError } from "./client-error.js"
 
@@ -1954,6 +1963,45 @@ const adaptGroupExperimentalConfig = (raw: RawClient["server.config"]) => ({
   update: EndpointExperimentalConfigUpdate(raw),
 })
 
+const EndpointExperimentalPushKey = (raw: RawClient["server.push"]) => () =>
+  preserveEffect<ExperimentalPushKeyOutput>()(raw["push.key"]({}).pipe(Effect.mapError(mapClientError)))
+
+const EndpointExperimentalPushStatus = (raw: RawClient["server.push"]) => (input: ExperimentalPushStatusInput) =>
+  preserveEffect<ExperimentalPushStatusOutput>()(
+    raw["push.status"]({ payload: { endpoint: input["endpoint"] } }).pipe(Effect.mapError(mapClientError)),
+  )
+
+const EndpointExperimentalPushSubscribe = (raw: RawClient["server.push"]) => (input: ExperimentalPushSubscribeInput) =>
+  preserveEffect<ExperimentalPushSubscribeOutput>()(
+    raw["push.subscribe"]({
+      payload: {
+        subscription: input["subscription"],
+        path: input["path"],
+        events: input["events"],
+        labels: input["labels"],
+      },
+    }).pipe(Effect.mapError(mapClientError)),
+  )
+
+const EndpointExperimentalPushUnsubscribe =
+  (raw: RawClient["server.push"]) => (input: ExperimentalPushUnsubscribeInput) =>
+    preserveEffect<ExperimentalPushUnsubscribeOutput>()(
+      raw["push.unsubscribe"]({ payload: { endpoint: input["endpoint"] } }).pipe(Effect.mapError(mapClientError)),
+    )
+
+const EndpointExperimentalPushTest = (raw: RawClient["server.push"]) => (input: ExperimentalPushTestInput) =>
+  preserveEffect<ExperimentalPushTestOutput>()(
+    raw["push.test"]({ payload: { endpoint: input["endpoint"] } }).pipe(Effect.mapError(mapClientError)),
+  )
+
+const adaptGroupExperimentalPush = (raw: RawClient["server.push"]) => ({
+  key: EndpointExperimentalPushKey(raw),
+  status: EndpointExperimentalPushStatus(raw),
+  subscribe: EndpointExperimentalPushSubscribe(raw),
+  unsubscribe: EndpointExperimentalPushUnsubscribe(raw),
+  test: EndpointExperimentalPushTest(raw),
+})
+
 const adaptClient = (raw: RawClient) => {
   const client = {
     server: adaptGroupServer(raw["server.server"]),
@@ -1972,6 +2020,7 @@ const adaptClient = (raw: RawClient) => {
       migration: adaptGroupExperimentalMigration(raw["server.migration"]),
       usage: adaptGroupExperimentalUsage(raw["server.usage"]),
       config: adaptGroupExperimentalConfig(raw["server.config"]),
+      push: adaptGroupExperimentalPush(raw["server.push"]),
     },
     message: adaptGroupMessage(raw["server.message"]),
     model: adaptGroupModel(raw["server.model"]),
@@ -2089,6 +2138,19 @@ const adaptClient = (raw: RawClient) => {
       ...client.config,
       /** @deprecated Use `client.experimental.config.update`. Removed in the next minor. */
       update: client.experimental.config.update,
+    },
+    /** @deprecated Use `client.experimental.push`. Removed in the next minor. */
+    push: {
+      /** @deprecated Use `client.experimental.push.key`. Removed in the next minor. */
+      key: client.experimental.push.key,
+      /** @deprecated Use `client.experimental.push.status`. Removed in the next minor. */
+      status: client.experimental.push.status,
+      /** @deprecated Use `client.experimental.push.subscribe`. Removed in the next minor. */
+      subscribe: client.experimental.push.subscribe,
+      /** @deprecated Use `client.experimental.push.unsubscribe`. Removed in the next minor. */
+      unsubscribe: client.experimental.push.unsubscribe,
+      /** @deprecated Use `client.experimental.push.test`. Removed in the next minor. */
+      test: client.experimental.push.test,
     },
   }
 }
