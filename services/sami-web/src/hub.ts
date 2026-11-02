@@ -2,7 +2,17 @@ import { shell } from "./hub-shell"
 
 // Only OpenCode-specific integration belongs here. Shared navigation is generated from the installed gateway.
 const styles = `
-/* Hub owns both safe-area insets. OpenCode must not reserve either again. */
+/* Portals mount under body, outside #root. Keep them inside the same application viewport. */
+body[data-hub-app=opencode] :is([data-slot=mobile-drawer-overlay],[data-component=dialog-overlay],[data-dialog-layer]){
+top:var(--hub-bar)!important;right:0!important;bottom:var(--hub-dock)!important;left:var(--hub-rail)!important
+}
+body[data-hub-app=opencode] [data-dialog-layer]{contain:layout}
+body[data-hub-app=opencode] [data-slot=dialog-container]{max-height:100%;max-width:100%}
+body[data-hub-app=opencode] [data-slot=mobile-drawer-content]{
+bottom:var(--hub-dock)!important;inset-inline-start:var(--hub-rail)!important;
+max-height:min(75dvh,calc(100dvh - var(--hub-bar) - var(--hub-dock) - 16px))!important;padding-bottom:12px!important
+}
+/* Hub reserves the top inset and owns the compact bottom edge. OpenCode must not reserve them again. */
 @media(max-width:767px){
 body[data-hub-app=opencode] [data-slot=titlebar-v2]:not(.order-last){height:36px!important;padding-top:8px!important}
 body[data-hub-app=opencode] [data-slot=titlebar-v2].order-last{height:36px!important;padding-bottom:0!important}

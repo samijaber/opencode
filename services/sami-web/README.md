@@ -14,7 +14,7 @@ All work that was uncommitted before this update is retained in `02ad6950ee`. Th
 
 Hub's selected ivory/cyan artwork is retained in `brand/source.png`, with launcher exports and the same-identity manifest in `assets/`. The Worker serves these at `/hub/*`'s explicit icon paths, `/favicon.ico` and `/site.webmanifest`, and replaces icon links in the three application documents without changing Flow/Orchestrator navigation or preview pages. Only the frontend is deployed; the gateway, backend, canonical OpenCode hostname and desktop branding are unchanged. Refresh browser tabs to load the new favicon. Existing iOS Home Screen installations may retain their old icon until removed and added again; the manifest's `/` identity remains stable.
 
-The OpenCode backend and Flow gateway run independently. Deploying this frontend restarts neither. Hub's history header and bottom dock consume the iOS safe-area insets once; the embedded OpenCode titlebar/main must not reserve them again. On wide screens the dock becomes a left rail. The shell's colors, four application links and history controls follow the installed Flow gateway and its shared design tokens.
+The OpenCode backend and Flow gateway run independently. Deploying this frontend restarts neither. Hub's history header consumes the iOS status-bar inset once; its compact dock has no additional bottom home-indicator spacer, matching Orchestrator. The embedded OpenCode titlebar/main must not reserve those edges again. Body-portalled drawers and dialogs use the same content bounds as the app, so the shared bars cannot hide their actions. On wide screens the dock becomes a left rail. The shell's colors, four application links and history controls follow the installed Flow gateway and its shared design tokens.
 
 ### Keep the Hub shell in sync
 
@@ -127,6 +127,10 @@ Worker version rollback does not undo route changes. When rolling back to a vers
 - A session's elapsed time is its age from creation, not a precise measurement of active execution time.
 
 ## Verification
+
+### November 2 compact dock and portal bounds
+
+The shared snapshot uses the compact dock consistently with 0px and 34px bottom safe areas. OpenCode's body-portalled session drawers and dialog layers now fit the same reserved viewport as `#root`, including the desktop rail. The keeper uses the actual drawer/titlebar/dialog styles, checks bounds at 375px, 390px and desktop widths, and touch-activates the drawer's Home and dialog's footer action. It fails when the old viewport-edge placement is restored and passes ten repetitions. All 37 Worker tests and the full repository check pass; the production build and Worker dry run succeed. Browser tests are not physical-iPhone evidence.
 
 ### November 2 shared Hub shell
 

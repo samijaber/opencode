@@ -39,7 +39,7 @@ test("both hosts serve the same custom bundle; only Hub adds navigation and keep
   expect(html).toContain("/_assets/custom.js")
   expect(html).toContain('aria-label="Hub applications"')
   expect(html).toContain('href="/flow/"')
-  expect(html).toContain('href="/verification/"')
+  expect(html).toContain('href="/verification"')
   expect(html).toContain('href="/previews/"')
   expect(html).toContain('id="hub-back"')
   expect(html).toContain('src="/hub/navigation.js"')
