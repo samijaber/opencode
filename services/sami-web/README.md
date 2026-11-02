@@ -12,6 +12,8 @@ All work that was uncommitted before this update is retained in `02ad6950ee`. Th
 
 `opencode-sami-web` serves the same `packages/app/dist` on the Worker **routes** `opencode.samijaber.com/*` and `hub.samijaber.com/*`. Hub adds the shared application shell and retains its network-only service worker. `/flow`, `/verification`, `/previews`, their subpaths, legacy Hub assets and aliases continue to the existing gateway. API requests, uploads and WebSockets pass through unchanged; SSE remains streaming. The existing Cloudflare Access applications protect both hostnames; workers.dev and preview URLs are disabled. The Worker stores no server password.
 
+The API subtrees in `origin-routes.json` have more-specific **no-script zone routes**. They go straight through the existing tunnel to the Mac gateway, avoiding a billable Worker invocation merely to forward a request. The gateway's authentication remains required. Phone browsers retain their HTTPS Hub address, not `localhost` (which would mean the phone). Mac-side gateway/backend requests already use loopback. Wrangler cannot declare no-script routes, so these are zone-owned; `check:origin` verifies them before and after deployment without changing routes or printing credentials. Do not remove them during a frontend deployment.
+
 Hub's selected ivory/cyan artwork is retained in `brand/source.png`, with launcher exports and the same-identity manifest in `assets/`. The Worker serves these at `/hub/*`'s explicit icon paths, `/favicon.ico` and `/site.webmanifest`, and replaces icon links in the three application documents without changing Flow/Orchestrator navigation or preview pages. Only the frontend is deployed; the gateway, backend, canonical OpenCode hostname and desktop branding are unchanged. Refresh browser tabs to load the new favicon. Existing iOS Home Screen installations may retain their old icon until removed and added again; the manifest's `/` identity remains stable.
 
 The OpenCode backend and Flow gateway run independently. Deploying this frontend restarts neither. Hub's history header consumes the iOS status-bar inset once; its compact dock has no additional bottom home-indicator spacer, matching Orchestrator. The embedded OpenCode titlebar/main must not reserve those edges again. Body-portalled drawers and dialogs use the same content bounds as the app, so the shared bars cannot hide their actions. On wide screens the dock becomes a left rail. The shell's colors, four application links and history controls follow the installed Flow gateway and its shared design tokens.
@@ -127,6 +129,12 @@ Worker version rollback does not undo route changes. When rolling back to a vers
 - A session's elapsed time is its age from creation, not a precise measurement of active execution time.
 
 ## Verification
+
+### November 2 API quota reduction
+
+Merge badges no longer poll every displayed session on a one-minute timer. On-demand mount/focus and branch-tip changes still refresh the query. The existing merged-badge keeper now advances browser time beyond the old timer, preserves the badge/title behavior at phone width, and asserts no repeated checks. It fails against the previous bundle and passes ten repetitions at five-worker concurrency. The full repository check and all 37 Worker tests pass. The production cold-entry benchmark hits its existing stable-timeline timeout before metrics on both the unchanged bundle (three attempts) and the corrected bundle (one attempt); no numerical timing comparison is claimed.
+
+Four zone-owned no-script API routes now avoid the forwarding Worker while preserving the authenticated Mac gateway. Public unauthenticated checks remain 403. `check:origin` verifies the exact exclusions before and after future frontend deployments. No server restart is part of this frontend change.
 
 ### November 2 compact dock and portal bounds
 

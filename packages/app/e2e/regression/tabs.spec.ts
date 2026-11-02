@@ -238,10 +238,15 @@ test("custom recents retain historical conversations alongside upstream tabs", a
 })
 
 test("custom merged badges do not change titles or appear for unknown branches", async ({ page }) => {
+  await page.clock.install()
+  const requests: string[] = []
   await mockWorkspace(page, {
     name: "Merged",
     sessions: [a, b],
-    sessionMerge: (id) => ({ state: id === a.id ? "merged" : "unknown", target: "main" }),
+    sessionMerge: (id) => {
+      requests.push(id)
+      return { state: id === a.id ? "merged" : "unknown", target: "main" }
+    },
   })
   await page.goto(sessionHref(a.id))
   const tab = page.locator("[data-titlebar-tab-slot]").filter({ hasText: a.title })
@@ -260,6 +265,19 @@ test("custom merged badges do not change titles or appear for unknown branches",
       .filter({ hasText: a.title })
       .getByRole("img", { name: "Merged into main" }),
   ).toBeVisible()
+  await page.clock.pauseAt(new Date(Date.now() + 1000))
+  const checked = [...requests]
+  // Keep idle tabs open beyond the former minute timer without hitting the SSE idle timeout.
+  for (let minute = 0; minute < 3; minute++) {
+    await page.clock.fastForward(30_000)
+    await expect(
+      drawer
+        .locator("[data-titlebar-tab-slot]")
+        .filter({ hasText: a.title })
+        .getByRole("img", { name: "Merged into main" }),
+    ).toBeVisible()
+    expect(requests).toEqual(checked)
+  }
 })
 
 test.describe("custom mobile scrolling", () => {

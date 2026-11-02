@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "bun run --cwd ../../packages/app build && bun prepare-assets.mjs",
-    "deploy": "bun run check:hub && wrangler deploy --var BUILD_SHA:$(git rev-parse HEAD)",
+    "deploy": "bun run check:hub && bun run check:origin && wrangler deploy --var BUILD_SHA:$(git rev-parse HEAD) && bun run check:origin",
+    "check:origin": "bun check-origin-routes.mjs",
     "sync:hub": "bun sync-hub-shell.mjs",
     "check:hub": "bun sync-hub-shell.mjs --check",
     "test": "bun test ./test",

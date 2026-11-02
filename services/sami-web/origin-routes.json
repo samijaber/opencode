@@ -1,0 +1,9 @@
+{
+  "zone_id": "5090b4245c61cff4beabdca2065cfc9a",
+  "patterns": [
+    "hub.samijaber.com/api/*",
+    "opencode.samijaber.com/api/*",
+    "hub.samijaber.com/flow/api/*",
+    "hub.samijaber.com/verification/api/*"
+  ]
+}

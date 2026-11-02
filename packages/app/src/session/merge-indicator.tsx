@@ -28,7 +28,7 @@ export function SessionMergeIndicator(props: { server: ServerConnection.Key; ses
     },
     enabled: !!props.sessionID && ctx()?.sdk.connection.status() === "connected",
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    // Recheck on demand or branch changes, not on a timer for every displayed session.
     retry: false,
     throwOnError: false,
   }))
