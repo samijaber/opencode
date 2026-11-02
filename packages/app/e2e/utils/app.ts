@@ -29,6 +29,12 @@ export function workspaceKey(directory: string, key: string) {
   return `opencode.workspace.${head}.${checksum(directory) ?? "0"}.dat:workspace:${key}`
 }
 
+export function draftPromptKey(draftID: string) {
+  const head = draftID.slice(0, 12).replace(/[^a-zA-Z0-9._-]/g, "-")
+
+  return `opencode.draft.${head}.${checksum(draftID) ?? "0"}.dat:draft:prompt`
+}
+
 export async function expectPath(page: Page, href: string) {
   await expect(page).toHaveURL(new RegExp(`${href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`))
 }

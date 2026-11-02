@@ -6,6 +6,7 @@ import {
   SERVER,
   T0,
   draftHref,
+  draftPromptKey,
   expectPath,
   holdRoute,
   pageMessagesFrom,
@@ -28,6 +29,71 @@ const b = { id: "ses_tab_b", title: "Tab B session" }
 const c = { id: "ses_tab_c", title: "Tab C session" }
 
 test.use({ serviceWorkers: "block" })
+
+test.describe("draft tab visibility", () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } })
+
+  test("hides abandoned empty drafts without losing active or authored drafts", async ({ page }) => {
+    const directory = "C:/OpenCode/Drafts"
+    const drafts = ["empty_one", "empty_two", "written", "attached", "context", "active"]
+    await mockWorkspace(page, {
+      name: "Drafts",
+      sessions: [a],
+      seed: {
+        tabs: [a.id, ...drafts.map((draft) => ({ draft, directory }))],
+        storage: {
+          [draftPromptKey("written")]: { prompt: [{ type: "text", content: "Keep this draft", start: 0, end: 15 }] },
+          [draftPromptKey("attached")]: {
+            prompt: [{ type: "file", content: "@notes.md", path: "notes.md", start: 0, end: 9 }],
+          },
+          [draftPromptKey("context")]: {
+            context: { items: [{ type: "file", path: "notes.md", key: "file:notes.md" }] },
+          },
+        },
+      },
+    })
+    await page.goto(draftHref("active"))
+    const editor = page.locator('[data-component="composer-editor"]')
+    await expect(editor).toBeEditable()
+    const trigger = page.getByRole("button", { name: "Tabs", exact: true })
+    await expect(trigger).toHaveText("Session5")
+    await trigger.tap()
+    const drawer = page.getByRole("dialog", { name: "Tabs", exact: true })
+    await expect(drawer.locator("[data-titlebar-tab-title]")).toHaveText([a.title, ...Array(4).fill("Session")])
+    await expect
+      .poll(() =>
+        drawer
+          .locator('a[href^="/new-session"]')
+          .evaluateAll((links) => links.map((link) => link.getAttribute("href"))),
+      )
+      .toEqual(["written", "attached", "context", "active"].map(draftHref))
+    await drawer.locator(`[data-titlebar-tab-list] a[href="${sessionHref(a.id)}"]`).tap()
+    await expectSessionTitle(page, a.title)
+    await expect(trigger).toHaveText(`D${a.title}4`)
+    await trigger.tap()
+    await expect(drawer.locator('a[href^="/new-session"]')).toHaveCount(3)
+    await drawer.getByRole("button", { name: "New session", exact: true }).tap()
+    await expect(editor).toBeEditable()
+    await expect(trigger).toHaveText("Session5")
+    await trigger.tap()
+    await drawer.locator(`a[href="${draftHref("written")}"]`).tap()
+    await expect(editor).toHaveText("Keep this draft")
+    await editor.fill("")
+    await trigger.tap()
+    await drawer.locator(`[data-titlebar-tab-list] a[href="${sessionHref(a.id)}"]`).tap()
+    await expectSessionTitle(page, a.title)
+    await expect(trigger).toHaveText(`D${a.title}3`)
+    await trigger.tap()
+    await expect(drawer.locator(`a[href="${draftHref("written")}"]`)).toHaveCount(0)
+    await drawer
+      .locator("[data-titlebar-tab-slot]")
+      .filter({ hasText: a.title })
+      .getByRole("button", { name: "Close tab", exact: true })
+      .tap()
+    await expectPath(page, draftHref("attached"))
+    await expect(editor).toBeEditable()
+  })
+})
 
 test.describe("shared tab dismissal", () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } })
@@ -337,7 +403,12 @@ test("tab strip keeps draft tabs as wide as session tabs and navigates on mouse 
   const workspace = await mockWorkspace(page, {
     name: "Tabs",
     sessions: [a, b],
-    seed: { tabs: [a.id, { draft: "draft_tab_width", directory: "C:/OpenCode/Tabs" }, b.id] },
+    seed: {
+      tabs: [a.id, { draft: "draft_tab_width", directory: "C:/OpenCode/Tabs" }, b.id],
+      storage: {
+        [draftPromptKey("draft_tab_width")]: { prompt: [{ type: "text", content: "Draft", start: 0, end: 5 }] },
+      },
+    },
   })
 
   await page.goto(sessionHref(a.id))
@@ -727,6 +798,12 @@ test("vertical tabs resize, scroll, show shortcut hints, and navigate", async ({
         ...Array.from({ length: 24 }, (_, index) => ({ draft: `draft_vertical_${index}`, directory })),
         b.id,
       ],
+      storage: Object.fromEntries(
+        Array.from({ length: 24 }, (_, index) => [
+          draftPromptKey(`draft_vertical_${index}`),
+          { prompt: [{ type: "text", content: "Draft", start: 0, end: 5 }] },
+        ]),
+      ),
     },
   })
   await page.goto(sessionHref(a.id))

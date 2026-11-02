@@ -200,13 +200,29 @@ export const { use: useTabs, provider: TabsProvider } = createSimpleContext({
       navigate(href)
     }
 
+    const visible = (tab: Tab) => {
+      if (tab.type === "session") return true
+      const route = currentRoute()
+
+      if (route.type === "draft" && route.draftID === tab.draftID) return true
+      const composer = memory.ensure(tabKey(tab), "prompt", () => createDraftComposerState(tab.draftID))
+
+      // Restored drafts load asynchronously. Never mistake their initial empty state for saved content.
+      return (
+        composer.ready() &&
+        (composer.current().some((part) => part.type !== "text" || !!part.content.trim()) ||
+          composer.context.items().length > 0)
+      )
+    }
+
     const removeTab = (index: number) => {
       const tab = store[index]
 
       if (!tab) return
       const key = tabKey(tab)
       const draftID = tab.type === "draft" ? tab.draftID : undefined
-      const nextTab = nextTabAfterClose(store, index, recentKey() === key && location.pathname !== "/")
+      const listed = store.filter(visible)
+      const nextTab = nextTabAfterClose(listed, listed.indexOf(tab), recentKey() === key && location.pathname !== "/")
       closing.add(key)
       void startTransition(() => {
         setStore(
@@ -639,6 +655,6 @@ export const { use: useTabs, provider: TabsProvider } = createSimpleContext({
       },
     }
 
-    return { ...actions, store, info, closed, ready, infoReady, recentReady, closedReady, regionsReady }
+    return { ...actions, visible, store, info, closed, ready, infoReady, recentReady, closedReady, regionsReady }
   },
 })

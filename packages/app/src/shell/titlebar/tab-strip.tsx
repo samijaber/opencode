@@ -398,6 +398,7 @@ export function TitlebarTabStrip(props: {
   onReorder?: (keys: string[]) => void
 }) {
   const global = useGlobal()
+  const tabs = useTabs()
   const language = useLanguage()
   const command = useCommand()
   const vertical = () => props.orientation === "vertical"
@@ -420,7 +421,9 @@ export function TitlebarTabStrip(props: {
   })
   const [visibility, setVisibility] = createStore<Record<string, boolean>>({})
   const [unread, setUnread] = createStore<Record<string, boolean>>({})
-  const visibleTabs = createMemo(() => props.tabs.filter((tab) => tab.type === "draft" || visibility[tabKey(tab)]))
+  const visibleTabs = createMemo(() =>
+    props.tabs.filter((tab) => (tab.type === "draft" ? tabs.visible(tab) : visibility[tabKey(tab)])),
+  )
   const visibleTabIds = () => visibleTabs().map(tabKey)
 
   // Tells the closed sidebar's toggle whether any row here shows its unread dot, which the current tab never does.
@@ -625,20 +628,22 @@ export function TitlebarTabStrip(props: {
                 }
 
                 return (
-                  <DraftTabSlot
-                    tab={tab}
-                    reorderable={!!props.onReorder}
-                    id={id}
-                    index={visibleIndex()}
-                    active={props.currentTab === tab}
-                    orientation={vertical() ? "vertical" : "horizontal"}
-                    title={language.t("session.tab.session")}
-                    onNavigate={(element) => {
-                      ref = element
-                      props.onNavigate(tab, element)
-                    }}
-                    onClose={() => props.onClose(tab)}
-                  />
+                  <Show when={tabs.visible(tab)}>
+                    <DraftTabSlot
+                      tab={tab}
+                      reorderable={!!props.onReorder}
+                      id={id}
+                      index={visibleIndex()}
+                      active={props.currentTab === tab}
+                      orientation={vertical() ? "vertical" : "horizontal"}
+                      title={language.t("session.tab.session")}
+                      onNavigate={(element) => {
+                        ref = element
+                        props.onNavigate(tab, element)
+                      }}
+                      onClose={() => props.onClose(tab)}
+                    />
+                  </Show>
                 )
               }}
             </For>

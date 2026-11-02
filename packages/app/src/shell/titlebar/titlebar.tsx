@@ -323,7 +323,7 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
               // Another window can close the tab backing this route. Leave it instead of publishing it back
               // into shared storage. A new navigation still opens a missing tab normally.
               if (matched) {
-                const next = tabsStore[matched.index] ?? tabsStore.at(-1)
+                const next = tabsStore.slice(matched.index).find(tabs.visible) ?? tabsStore.findLast(tabs.visible)
 
                 if (next) tabs.select(next)
                 else navigate("/")
@@ -714,7 +714,7 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
                         <Show when={preparing() || currentStatus.loading()}>
                           <ActivityRing />
                         </Show>
-                        <span class="shrink-0 text-v2-text-text-muted">{tabsStore.length}</span>
+                        <span class="shrink-0 text-v2-text-text-muted">{tabsStore.filter(tabs.visible).length}</span>
                       </MobileDrawerTrigger>
                       <MobileDrawerContent>
                         <MobileDrawerLabel class="sr-only">{language.t("titlebar.tabs")}</MobileDrawerLabel>

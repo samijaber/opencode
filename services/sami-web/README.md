@@ -36,6 +36,8 @@ Within one browser profile, Hub imports saved settings, language, theme, layout,
 
 Closing a shared tab also moves any other window viewing it to a remaining tab, or Home when none remain. A background window must not reopen a dismissed tab merely because its URL still names the session. Explicit navigation, including browser Back, can still reopen it.
 
+Empty new-session drafts are listed only while active. Inactive drafts remain listed when they contain text, attachments or context; their saved composer is loaded before deciding visibility. This is a display filter, not deletion, so drafts in other windows/origins are not discarded. Tab counts, keyboard cycling, reordering and close-navigation skip hidden blanks.
+
 The small `/_opencode/preferences` document on the canonical hostname uses exact-origin/source-checked messages and may be framed only by Hub. The main application still denies framing. Both existing Cloudflare Access applications remain unchanged. If canonical sign-in expires or the address is offline, Hub falls back to local settings rather than blocking startup; open the canonical address to sign in again. Refresh both addresses once after installing this update.
 
 ## Update
@@ -110,6 +112,12 @@ Worker version rollback does not undo route changes. When rolling back to a vers
 - A session's elapsed time is its age from creation, not a precise measurement of active execution time.
 
 ## Verification
+
+### November 1 empty draft tabs
+
+The phone/touch keeper fails on the previous bundle (seven listed tabs instead of five) and passes ten repetitions at five-worker concurrency. It covers restored empty drafts, saved text, attachment-only/context-only drafts, leaving an active blank, opening another draft, clearing text, the mobile count and closing past hidden blanks. Layout fixtures now use authored drafts instead of abandoned blanks. The full tab keeper passes 41 of 46 cases; the remaining five are the previously documented macOS shortcut/caret/paste/label failures. The full repository check and all 32 Worker tests pass; the separate e2e typecheck has unrelated existing errors and none in modified files.
+
+The production tab-close benchmark times out in its existing stable-timeline probe before reporting metrics, on both the unchanged bundle (three attempts) and the corrected bundle (one attempt). No numerical performance comparison is claimed. The synthetic preview was exercised at 375px, 390px and desktop widths; signed-in remote browser verification was unavailable. Frontend deployment does not restart the installed app, server or Flow gateway.
 
 ### November 1 shared-tab dismissal
 
