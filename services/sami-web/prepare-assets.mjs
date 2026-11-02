@@ -1,4 +1,7 @@
 import { createHash } from "node:crypto"
+import { cp } from "node:fs/promises"
+
+await cp("./assets", "../../packages/app/dist", { recursive: true })
 
 const bridge = await Bun.build({
   entrypoints: ["./browser/preferences.ts"],

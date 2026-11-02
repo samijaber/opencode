@@ -18,8 +18,8 @@ body{margin:0;padding-top:var(--hub-bar)!important;box-sizing:border-box}
 `
 
 export function hubShell(response: Response) {
-  return new HTMLRewriter()
-    .on('link[rel="manifest"],link[rel="apple-touch-icon"],meta[name="theme-color"]', {
+  return hubBranding()
+    .on('meta[name="theme-color"]', {
       element(element) {
         element.remove()
       },
@@ -27,7 +27,7 @@ export function hubShell(response: Response) {
     .on("head", {
       element(element) {
         element.append(
-          `<link rel="manifest" href="/site.webmanifest" crossorigin="use-credentials"><link rel="apple-touch-icon" href="/hub/icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Hub"><style>${styles}</style>`,
+          `<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Hub"><style>${styles}</style>`,
           { html: true },
         )
       },
@@ -42,4 +42,22 @@ export function hubShell(response: Response) {
       },
     })
     .transform(response)
+}
+
+// Share the selected Hub artwork with origin-served Flow and Orchestrator without replacing their shell.
+export function hubBranding() {
+  return new HTMLRewriter()
+    .on('link[rel="manifest"],link[rel="apple-touch-icon"],link[rel~="icon"]', {
+      element(element) {
+        element.remove()
+      },
+    })
+    .on("head", {
+      element(element) {
+        element.append(
+          '<link rel="manifest" href="/site.webmanifest" crossorigin="use-credentials"><link rel="icon" type="image/x-icon" href="/hub/favicon.ico?v=1"><link rel="apple-touch-icon" sizes="180x180" href="/hub/apple-touch-icon.png?v=1">',
+          { html: true },
+        )
+      },
+    })
 }
