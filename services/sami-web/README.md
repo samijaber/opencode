@@ -10,11 +10,26 @@ All work that was uncommitted before this update is retained in `02ad6950ee`. Th
 
 ## Hosting
 
-`opencode-sami-web` serves the same `packages/app/dist` on the Worker **routes** `opencode.samijaber.com/*` and `hub.samijaber.com/*`. Hub adds the existing application navigation and retains its network-only service worker. `/flow`, `/verification`, their subpaths, legacy Hub assets and aliases continue to the existing gateway. API requests, uploads and WebSockets pass through unchanged; SSE remains streaming. The existing Cloudflare Access applications protect both hostnames; workers.dev and preview URLs are disabled. The Worker stores no server password.
+`opencode-sami-web` serves the same `packages/app/dist` on the Worker **routes** `opencode.samijaber.com/*` and `hub.samijaber.com/*`. Hub adds the shared application shell and retains its network-only service worker. `/flow`, `/verification`, `/previews`, their subpaths, legacy Hub assets and aliases continue to the existing gateway. API requests, uploads and WebSockets pass through unchanged; SSE remains streaming. The existing Cloudflare Access applications protect both hostnames; workers.dev and preview URLs are disabled. The Worker stores no server password.
 
 Hub's selected ivory/cyan artwork is retained in `brand/source.png`, with launcher exports and the same-identity manifest in `assets/`. The Worker serves these at `/hub/*`'s explicit icon paths, `/favicon.ico` and `/site.webmanifest`, and replaces icon links in the three application documents without changing Flow/Orchestrator navigation or preview pages. Only the frontend is deployed; the gateway, backend, canonical OpenCode hostname and desktop branding are unchanged. Refresh browser tabs to load the new favicon. Existing iOS Home Screen installations may retain their old icon until removed and added again; the manifest's `/` identity remains stable.
 
-The OpenCode backend and Flow gateway run independently. Deploying this frontend restarts neither. Hub consumes the iOS top safe-area inset once; its embedded OpenCode titlebar must not reserve the status-bar inset again. With bottom navigation, the same rule applies to the main content's top padding; the bottom home-indicator inset remains unchanged. The shell's colors and navigation follow the installed Flow gateway and Iradeh design tokens.
+The OpenCode backend and Flow gateway run independently. Deploying this frontend restarts neither. Hub's history header and bottom dock consume the iOS safe-area insets once; the embedded OpenCode titlebar/main must not reserve them again. On wide screens the dock becomes a left rail. The shell's colors, four application links and history controls follow the installed Flow gateway and its shared design tokens.
+
+### Keep the Hub shell in sync
+
+Flow's **installed service** is authoritative, not an arbitrary Iradah development checkout. OpenCode's `src/hub-shell.ts` is generated from that service's `hubHtml`, including tokens, CSS, markup and the shared history-script reference. `/hub/navigation.js` remains gateway-served, so history uses the same implementation in every app. Only OpenCode-specific safe-area integration and selected icon branding stay local.
+
+After a Hub shell change or Flow deployment, run from this directory:
+
+```sh
+bun run sync:hub
+bun run test
+bun run build
+bun run deploy
+```
+
+Review generated changes and the inset overrides, and run the repository check before deploying. `deploy` runs `check:hub` and refuses a shell that differs from the installed gateway; it never silently regenerates during deployment. The default source is discovered from Flow's LaunchAgent. For another environment, set `HUB_SHELL_SOURCE` to the authoritative `packages/feature-map/server/hub.mjs`. Tests and ordinary builds use the committed snapshot and do not require a local Flow installation. Do not hand-edit the snapshot or bypass parity checks. A new link also needs its gateway-owned routes preserved in `src/index.ts`.
 
 ## Background notifications
 
@@ -112,6 +127,12 @@ Worker version rollback does not undo route changes. When rolling back to a vers
 - A session's elapsed time is its age from creation, not a precise measurement of active execution time.
 
 ## Verification
+
+### November 2 shared Hub shell
+
+The Worker shell is generated from the installed Flow gateway, restoring its mobile bottom dock, desktop rail, four app links and shared history controls. `/previews` routes now reach the gateway instead of OpenCode's SPA. The deployment parity check rejects a different source shell. The layout keeper fails when the old 48px top-switcher placement is restored and passes ten repetitions after the fix, covering 375px/390px touch viewports, a short viewport, status-bar/home-indicator insets, both OpenCode titlebar positions, desktop placement and 44px controls.
+
+All 36 Worker tests and the full repository check pass. The preference fixture explicitly isolates the gateway-owned script, and both browser engines pass ten repetitions. A separate touch-browser integration check runs the actual shared history script across synthetic OpenCode/Flow/Orchestrator/Previews documents and exercises cross-app back/forward. The self-contained preview's switching, local history, input and content scrolling pass at 375px, 390px and 1280px. These checks are browser emulation, not physical-iPhone evidence. Deployment updates only the frontend Worker.
 
 ### November 1 empty draft tabs
 

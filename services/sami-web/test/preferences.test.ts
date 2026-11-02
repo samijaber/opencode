@@ -23,6 +23,11 @@ test.each([chromium, webkit])(
     try {
       await context.route("https://*.samijaber.com/**", async (route) => {
         const request = new Request(route.request().url())
+        // Shared history is gateway-owned; this preference-only fixture must not contact the real origin.
+        if (new URL(request.url).pathname === "/hub/navigation.js") {
+          await route.fulfill({ contentType: "text/javascript", body: "" })
+          return
+        }
         const response = await worker.fetch(request, {
           BUILD_SHA: "test",
           // SAFETY: the test asset binding only needs fetch; all content is synthetic and no network is permitted.

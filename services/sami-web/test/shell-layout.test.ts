@@ -3,24 +3,24 @@ import { chromium } from "@playwright/test"
 import { hubShell } from "../src/hub"
 
 // Real browser layout: unlike jsdom, Chromium evaluates the safe-area env() values and inline/CSS cascade.
-test("Hub top and bottom navigation consume the status-bar inset exactly once", async () => {
+test("Hub dock, desktop rail and OpenCode titlebars consume safe-area insets exactly once", async () => {
   const browser = await chromium.launch()
   try {
-    for (const { top, position, width } of [
-      { top: 0, position: "top", width: 390 },
-      { top: 59, position: "top", width: 390 },
-      { top: 0, position: "bottom", width: 375 },
-      { top: 59, position: "bottom", width: 390 },
+    for (const { top, position, width, height } of [
+      { top: 0, position: "top", width: 375, height: 667 },
+      { top: 59, position: "top", width: 390, height: 844 },
+      { top: 0, position: "bottom", width: 375, height: 560 },
+      { top: 59, position: "bottom", width: 390, height: 844 },
+      { top: 0, position: "top", width: 1280, height: 800 },
     ]) {
-      const context = await browser.newContext({ viewport: { width, height: 844 }, isMobile: true, hasTouch: true })
+      const context = await browser.newContext({ viewport: { width, height }, isMobile: width < 1000, hasTouch: true })
       const page = await context.newPage()
       const cdp = await context.newCDPSession(page)
       await cdp.send("Emulation.setSafeAreaInsetsOverride", { insets: { top, bottom: top ? 34 : 0 } })
-      // Upstream reserves the top inset in the header, or in main when the header moves to the bottom.
-      // This fixture exercises Hub's CSS against both inline styles and preserves the bottom home-indicator inset.
+      // Upstream reserves insets in its titlebar/main. Hub now owns both in its history bar and dock.
       const bottom = position === "bottom"
       const html = `<html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>
-        *{box-sizing:border-box}#root{display:flex;flex-direction:column}#root>div{flex:1;min-height:0;display:flex}main{flex:1;display:flex;flex-direction:column}section{flex:1}.order-last{order:1}
+         *{box-sizing:border-box}#root{display:flex;flex-direction:column}#root>div{flex:1;min-height:0;display:flex}main{flex:1;display:flex;flex-direction:column}section{flex:1}.order-last{order:1}
       </style></head><body><div id="root" data-standalone="${!!top}">
         <header data-slot="titlebar-v2" class="${bottom ? "order-last" : ""}" style="
           flex-shrink:0;
@@ -33,27 +33,49 @@ test("Hub top and bottom navigation consume the status-bar inset exactly once", 
       await page.setContent(await hubShell(new Response(html)).text())
       const geometry = await page.evaluate(() => {
         const navigation = document.querySelector("#hub-navigation")!.getBoundingClientRect()
-        const header = document.querySelector("header")!.getBoundingClientRect()
+        const history = document.querySelector("#hub-history")!.getBoundingClientRect()
+        const header = document.querySelector("[data-slot=titlebar-v2]")!.getBoundingClientRect()
         const content = document.querySelector("section")!.getBoundingClientRect()
+        const root = document.querySelector("#root")!.getBoundingClientRect()
         return {
+          navigationTop: navigation.top,
           navigationHeight: navigation.height,
-          gap: (header.top < content.top ? header.top : content.top) - navigation.bottom,
+          navigationWidth: navigation.width,
+          gap: Math.min(header.top, content.top) - history.bottom,
           position: header.top < content.top ? "top" : "bottom",
           headerHeight: header.height,
-          bottomPadding: getComputedStyle(document.querySelector("header")!).paddingBottom,
-          rootBottom: document.querySelector("#root")!.getBoundingClientRect().bottom,
+          bottomPadding: getComputedStyle(document.querySelector("[data-slot=titlebar-v2]")!).paddingBottom,
+          rootLeft: root.left,
+          rootBottom: root.bottom,
           contentBottom: Math.max(header.bottom, content.bottom),
+          dockPadding: getComputedStyle(document.querySelector("#hub-navigation")!).paddingBottom,
         }
       })
+      const dock = width < 1000 ? 72 + (top ? 34 : 0) : 0
       expect(geometry).toEqual({
-        navigationHeight: 48 + top,
+        navigationTop: width < 1000 ? height - dock : 0,
+        navigationHeight: width < 1000 ? dock : height,
+        navigationWidth: width < 1000 ? width : 112,
         gap: 0,
         position,
-        headerHeight: bottom && top ? 62 : 36,
-        bottomPadding: bottom && top ? "34px" : "0px",
-        rootBottom: 844,
-        contentBottom: 844,
+        headerHeight: 36,
+        bottomPadding: "0px",
+        rootLeft: width < 1000 ? 0 : 112,
+        rootBottom: height - dock,
+        contentBottom: height - dock,
+        dockPadding: top ? "34px" : "0px",
       })
+      expect(await page.locator("#hub-navigation a").allTextContents()).toEqual([
+        "OpenCode",
+        "Orchestrator",
+        "Flow",
+        "Previews",
+      ])
+      for (const link of await page.locator("#hub-navigation a, #hub-history button").all()) {
+        const box = (await link.boundingBox())!
+        expect(box.width).toBeGreaterThanOrEqual(44)
+        expect(box.height).toBeGreaterThanOrEqual(44)
+      }
       await context.close()
     }
   } finally {

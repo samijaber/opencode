@@ -2,6 +2,7 @@
 - Keep runtime dependencies directed from Schema to Core and Protocol, then from Core and Protocol to Server. Client runtime code may depend on Schema and Protocol but never Core or Server; `sdk` composes Client, Core, and Server.
 - This repository does not use Changesets. Do not add `.changeset` files; follow the existing release workflow instead.
 - This fork's default branch is `main` on `fork` (`samijaber/opencode`). Base custom branches and worktrees on `fork/main`, target fork PRs at `main`, and diff against `fork/main`. Upstream remains `origin/dev` (`anomalyco/opencode`); use that base and target `dev` only for upstream contributions.
+- Hub's shared shell must match the **installed Flow gateway**, not an older Iradah checkout. After navigation, history, design-token or safe-area changes, run `bun run sync:hub` in `services/sami-web`, review the generated shell and OpenCode-specific inset overrides, run its tests, and deploy the verified frontend. `bun run deploy` checks shell parity; never bypass it or hand-edit `src/hub-shell.ts`. Keep `/previews` and shared `/hub/*` assets routed to the gateway. This must not restart OpenCode or Flow.
 
 ## Mobile-First Web UX
 

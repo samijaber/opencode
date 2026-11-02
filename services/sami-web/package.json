@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "bun run --cwd ../../packages/app build && bun prepare-assets.mjs",
-    "deploy": "wrangler deploy --var BUILD_SHA:$(git rev-parse HEAD)",
+    "deploy": "bun run check:hub && wrangler deploy --var BUILD_SHA:$(git rev-parse HEAD)",
+    "sync:hub": "bun sync-hub-shell.mjs",
+    "check:hub": "bun sync-hub-shell.mjs --check",
     "test": "bun test ./test",
     "typecheck": "bun check --no-script -p tsconfig.json",
     "types": "wrangler types --include-runtime=false"

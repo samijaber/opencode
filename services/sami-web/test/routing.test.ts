@@ -40,6 +40,9 @@ test("both hosts serve the same custom bundle; only Hub adds navigation and keep
   expect(html).toContain('aria-label="Hub applications"')
   expect(html).toContain('href="/flow/"')
   expect(html).toContain('href="/verification/"')
+  expect(html).toContain('href="/previews/"')
+  expect(html).toContain('id="hub-back"')
+  expect(html).toContain('src="/hub/navigation.js"')
   expect(html).toContain('href="/site.webmanifest"')
   expect(html).not.toContain("old.webmanifest")
   expect(html).not.toContain("/old.ico")
@@ -57,6 +60,10 @@ test.each([
   "/verification",
   "/verification/dag-runs/example",
   "/verification/api/logs",
+  "/previews",
+  "/previews/",
+  "/previews/synthetic",
+  "/hub/navigation.js",
   "/hub/legacy-asset.png",
   "/opencode",
   "/api/info",

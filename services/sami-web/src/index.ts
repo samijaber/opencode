@@ -58,10 +58,10 @@ self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));`
     // and response without buffering: SSE, uploads, cookies and WebSocket upgrades keep their semantics.
     if (
       (hub &&
-        (["/flow", "/verification", "/orchestrator", "/orchestrator/", "/opencode", "/opencode/"].includes(
+        (["/flow", "/verification", "/previews", "/orchestrator", "/orchestrator/", "/opencode", "/opencode/"].includes(
           url.pathname,
         ) ||
-          ["/flow/", "/verification/", "/hub/"].some((prefix) => url.pathname.startsWith(prefix)))) ||
+          ["/flow/", "/verification/", "/previews/", "/hub/"].some((prefix) => url.pathname.startsWith(prefix)))) ||
       url.pathname === "/api" ||
       url.pathname.startsWith("/api/") ||
       url.pathname.startsWith("/auth/") ||
