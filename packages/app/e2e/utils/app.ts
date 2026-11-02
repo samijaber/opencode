@@ -33,6 +33,16 @@ export async function expectPath(page: Page, href: string) {
   await expect(page).toHaveURL(new RegExp(`${href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`))
 }
 
+// Exercise origin-scoped browser behavior with the local app bundle, never the deployed site.
+export async function serveAppOrigin(page: Page, origin: string, baseURL: string) {
+  await page.route(`${origin}/**`, async (route) => {
+    const url = new URL(route.request().url())
+
+    if (url.pathname.startsWith("/api/")) return route.fallback()
+    await route.fulfill({ response: await page.request.get(new URL(url.pathname + url.search, baseURL).href) })
+  })
+}
+
 export type TabSeed =
   | string
   | { session: string; server?: string }

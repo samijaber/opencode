@@ -294,14 +294,17 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
             }
 
             const currentTab = () => matchRoute(layout.route())
+            let matched: { route: LayoutRoute; index: number } | undefined
 
             createEffect(() => {
               const route = layout.route()
 
               if (!tabs.ready()) return
+              if (matched?.route !== route) matched = undefined
               const tab = currentTab()
 
               if (tab) {
+                matched = { route, index: tabsStore.indexOf(tab) }
                 const current = session()
 
                 if (
@@ -313,6 +316,17 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
                 }
 
                 tabs.remember(tab)
+
+                return
+              }
+
+              // Another window can close the tab backing this route. Leave it instead of publishing it back
+              // into shared storage. A new navigation still opens a missing tab normally.
+              if (matched) {
+                const next = tabsStore[matched.index] ?? tabsStore.at(-1)
+
+                if (next) tabs.select(next)
+                else navigate("/")
 
                 return
               }

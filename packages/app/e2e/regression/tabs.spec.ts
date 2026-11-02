@@ -11,6 +11,7 @@ import {
   pageMessagesFrom,
   project,
   seed,
+  serveAppOrigin,
   session,
   sessionHref,
 } from "../utils/app"
@@ -27,6 +28,80 @@ const b = { id: "ses_tab_b", title: "Tab B session" }
 const c = { id: "ses_tab_c", title: "Tab C session" }
 
 test.use({ serviceWorkers: "block" })
+
+test.describe("shared tab dismissal", () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } })
+
+  test("closing a tab in another window does not let its active session reopen it", async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    if (!baseURL) throw new Error("The app fixture needs a base URL")
+    const origin = "https://opencode.samijaber.com"
+    const other = await context.newPage()
+    const sessions = [a, b].map((item) => session({ ...item, directory: "C:/OpenCode/SharedTabs" }))
+    for (const target of [page, other]) {
+      await serveAppOrigin(target, origin, baseURL)
+      await mockServers(target, {
+        [origin]: {
+          sessions,
+          directory: "C:/OpenCode/SharedTabs",
+          project: project({ id: "proj_shared_tabs", directory: "C:/OpenCode/SharedTabs" }),
+          provider: NO_PROVIDER,
+          pageMessages: () => ({ items: [] }),
+        },
+      })
+      await seed(target, {
+        servers: [origin],
+        tabs: [a, b].map((item) => ({ session: item.id, server: origin })),
+      })
+    }
+    await page.goto(origin + sessionHref(a.id, origin))
+    await expectSessionTitle(page, a.title)
+    await other.goto(origin + sessionHref(b.id, origin))
+    await expectSessionTitle(other, b.title)
+    await other.getByRole("button", { name: "Tabs", exact: true }).tap()
+    const otherDrawer = other.getByRole("dialog", { name: "Tabs", exact: true })
+    await otherDrawer
+      .locator("[data-titlebar-tab-slot]")
+      .filter({ hasText: a.title })
+      .getByRole("button", { name: "Close tab", exact: true })
+      .tap()
+    await expect(otherDrawer.locator("[data-titlebar-tab-title]")).toHaveText([b.title])
+
+    // The other window must leave the dismissed route, rather than auto-adding its missing tab.
+    await expectPath(page, sessionHref(b.id, origin))
+    await expectSessionTitle(page, b.title)
+    await page.getByRole("button", { name: "Tabs", exact: true }).tap()
+    await expect(
+      page.getByRole("dialog", { name: "Tabs", exact: true }).locator("[data-titlebar-tab-title]"),
+    ).toHaveText([b.title])
+    await expect(otherDrawer.locator("[data-titlebar-tab-title]")).toHaveText([b.title])
+
+    // Intentional navigation can still reopen the session that was just dismissed.
+    await page.keyboard.press("Escape")
+    await page.goBack()
+    await expectPath(page, sessionHref(a.id, origin))
+    await expectSessionTitle(page, a.title)
+    await page.getByRole("button", { name: "Tabs", exact: true }).tap()
+    const drawer = page.getByRole("dialog", { name: "Tabs", exact: true })
+    await expect(drawer.locator("[data-titlebar-tab-title]")).toHaveText([b.title, a.title])
+    await drawer
+      .locator("[data-titlebar-tab-slot]")
+      .filter({ hasText: a.title })
+      .getByRole("button", { name: "Close tab", exact: true })
+      .tap()
+    await expectPath(page, sessionHref(b.id, origin))
+    await expect(otherDrawer.locator("[data-titlebar-tab-title]")).toHaveText([b.title])
+
+    await otherDrawer.getByRole("button", { name: "Close tab", exact: true }).tap()
+    await expectPath(other, "/")
+    await expectPath(page, "/")
+    await expect(drawer.locator("[data-titlebar-tab-title]")).toHaveCount(0)
+    await other.close()
+  })
+})
 
 test("custom recents update remote read markers while the mobile picker is closed", async ({ page }) => {
   const idle = Date.now()

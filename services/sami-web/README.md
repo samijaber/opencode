@@ -34,6 +34,8 @@ Server tests decrypt real generated push requests and check subscription persist
 
 Within one browser profile, Hub imports saved settings, language, theme, layout, and open session tabs from `opencode.samijaber.com` before mounting. Changes then propagate in both directions without reloading. Hub retains its previous values in `opencode.preferences.backup.v1`; unsent changes survive reloads in `opencode.preferences.pending.v1`. Draft composers stay on their original origin, and server registrations, credentials, prompt history, and API caches are not transferred. This is browser-local sharing, not cross-device/account sync.
 
+Closing a shared tab also moves any other window viewing it to a remaining tab, or Home when none remain. A background window must not reopen a dismissed tab merely because its URL still names the session. Explicit navigation, including browser Back, can still reopen it.
+
 The small `/_opencode/preferences` document on the canonical hostname uses exact-origin/source-checked messages and may be framed only by Hub. The main application still denies framing. Both existing Cloudflare Access applications remain unchanged. If canonical sign-in expires or the address is offline, Hub falls back to local settings rather than blocking startup; open the canonical address to sign in again. Refresh both addresses once after installing this update.
 
 ## Update
@@ -108,6 +110,12 @@ Worker version rollback does not undo route changes. When rolling back to a vers
 - A session's elapsed time is its age from creation, not a precise measurement of active execution time.
 
 ## Verification
+
+### November 1 shared-tab dismissal
+
+The phone/touch keeper reproduces a background window restoring a dismissed session tab before the fix. It now passes ten repetitions at five-worker concurrency, including browser Back reopening, local closure, and closing the last shared tab. The full tab keeper passes 40 of 45 cases; the five failures are the already documented macOS numbered-shortcut, caret/paste and shortcut-label cases. The full repository check and all 32 Worker tests pass. The separate e2e typecheck still reports unrelated existing errors, with none in the modified files.
+
+Production cold-entry benchmarks time out in the existing stable-timeline probe before reporting metrics on both the unchanged and corrected bundles (three baseline attempts and one comparison). No numerical performance comparison is claimed. Verification and deployment do not restart the installed app or backend.
 
 ### October 31 upstream/Hub integration
 
