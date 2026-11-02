@@ -8,7 +8,10 @@ body{margin:0;padding-top:var(--hub-bar)!important;box-sizing:border-box}
 @media(display-mode:standalone){#root{height:calc(100vh - var(--hub-bar))!important}}
 #root[data-standalone=true]{height:calc(100vh - var(--hub-bar))!important}
 /* Hub already owns the status-bar inset. OpenCode must not add it a second time in an installed iOS app. */
-@media(max-width:767px){body[data-hub-app=opencode] [data-slot=titlebar-v2]:not(.order-last){height:36px!important;padding-top:8px!important}}
+@media(max-width:767px){
+body[data-hub-app=opencode] [data-slot=titlebar-v2]:not(.order-last){height:36px!important;padding-top:8px!important}
+body[data-hub-app=opencode] [data-slot=titlebar-v2].order-last + div > main{padding-top:0!important}
+}
 #hub-navigation{position:fixed;inset:0 0 auto;z-index:2147483646;box-sizing:border-box;height:var(--hub-bar);padding:env(safe-area-inset-top,0px) max(8px,env(safe-area-inset-right,0px)) 0 max(8px,env(safe-area-inset-left,0px));display:flex;background:#f9f7f2;color:#1c2b26;border-bottom:1px solid currentColor;font:400 .875rem/1.25 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;direction:ltr}
 #hub-navigation a{box-sizing:border-box;display:flex;align-items:center;justify-content:center;min-height:44px;min-width:0;padding:8px 16px;color:inherit;background:transparent;text-align:center;text-decoration:none;border:0;border-bottom:2px solid transparent;border-radius:0;overflow-wrap:anywhere}
 #hub-navigation a[aria-current=page]{border-bottom-color:currentColor;font-weight:700}

@@ -14,7 +14,7 @@ All work that was uncommitted before this update is retained in `02ad6950ee`. Th
 
 Hub's selected ivory/cyan artwork is retained in `brand/source.png`, with launcher exports and the same-identity manifest in `assets/`. The Worker serves these at `/hub/*`'s explicit icon paths, `/favicon.ico` and `/site.webmanifest`, and replaces icon links in the three application documents without changing Flow/Orchestrator navigation or preview pages. Only the frontend is deployed; the gateway, backend, canonical OpenCode hostname and desktop branding are unchanged. Refresh browser tabs to load the new favicon. Existing iOS Home Screen installations may retain their old icon until removed and added again; the manifest's `/` identity remains stable.
 
-The OpenCode backend and Flow gateway run independently. Deploying this frontend restarts neither. Hub consumes the iOS top safe-area inset once; its embedded OpenCode titlebar must not reserve the status-bar inset again. The shell's colors and navigation follow the installed Flow gateway and Iradeh design tokens.
+The OpenCode backend and Flow gateway run independently. Deploying this frontend restarts neither. Hub consumes the iOS top safe-area inset once; its embedded OpenCode titlebar must not reserve the status-bar inset again. With bottom navigation, the same rule applies to the main content's top padding; the bottom home-indicator inset remains unchanged. The shell's colors and navigation follow the installed Flow gateway and Iradeh design tokens.
 
 ## Background notifications
 
@@ -111,7 +111,7 @@ Worker version rollback does not undo route changes. When rolling back to a vers
 
 ### October 31 upstream/Hub integration
 
-Worker routing, streaming, host rejection, shared bundles and Hub manifests are covered by `test/routing.test.ts`. `test/shell-layout.test.ts` uses Chromium's actual safe-area override to check zero duplicate padding with 0px and 59px status-bar insets. This is browser emulation, not physical-iPhone evidence. The tab keeper covers historical recents, merged badges and native touch scrolling.
+Worker routing, streaming, host rejection, shared bundles and Hub manifests are covered by `test/routing.test.ts`. `test/shell-layout.test.ts` uses Chromium's actual safe-area override to check both top- and bottom-bar layouts with 0px and 59px status-bar insets. It checks zero duplicate top spacing, navigation placement, viewport bounds and preserved bottom home-indicator padding. These cases run in the Worker's standard test suite and upstream-sync gate. This is browser emulation, not physical-iPhone evidence. The tab keeper covers historical recents, merged badges and native touch scrolling.
 
 The safe-area regression fails without the integration override (103px titlebar instead of 36px with a 59px inset) and passes with it. The full repository check passes. Focused checks pass for session creation/merge/recency, API behavior, migration upgrades, event manifests, tab status and Home index/order helpers.
 
