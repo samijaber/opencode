@@ -1,5 +1,5 @@
 import { NodeFileSystem } from "@effect/platform-node"
-import { expect, test } from "bun:test"
+import { expect, setSystemTime, test } from "bun:test"
 import { Effect, FileSystem } from "effect"
 import { writeFile } from "node:fs/promises"
 import { Service, type EnsureReason } from "../src/effect/service"
@@ -299,19 +299,31 @@ test("signals an incompatible service before starting its replacement", async ()
 test("waits for a slow winner while bounding lock probes", async () => {
   await using fixture = await serviceFixture()
   const registration = fixture.registration
-  const endpoint = await run(
+  const now = Date.now()
+  // Advance the recruitment clock only after the first child starts. Real filesystem/process startup on
+  // Windows must not consume the backed-off window and recruit a third probe before the winner registers.
+  setSystemTime(now)
+  const pending = run(
     ensure({
       file: registration,
       version: "test",
       command: fixture.command("coordinated"),
     }),
   )
-  const info = await Bun.file(registration).json()
-  fixture.track(info.pid)
+  try {
+    await fixture.waitForStarts(1)
+    setSystemTime(now + 201)
+    const endpoint = await pending
+    const info = await Bun.file(registration).json()
+    fixture.track(info.pid)
 
-  expect(endpoint.url).toBe(info.url)
-  expect(await status(endpoint.url)).toMatchObject({ version: "test", pid: info.pid })
-  expect((await Bun.file(registration + ".starts").text()).trim().split("\n")).toHaveLength(2)
+    expect(endpoint.url).toBe(info.url)
+    expect(await status(endpoint.url)).toMatchObject({ version: "test", pid: info.pid })
+    expect(await fixture.starts()).toHaveLength(2)
+  } finally {
+    setSystemTime()
+    await pending
+  }
 })
 
 test("waits for a live contender when another contender fails", async () => {

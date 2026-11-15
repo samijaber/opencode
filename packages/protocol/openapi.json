@@ -863,6 +863,74 @@
         }
       }
     },
+    "/api/session/{sessionID}/merge": {
+      "get": {
+        "tags": ["session"],
+        "operationId": "session.merge",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/Session.ID"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Session.Merge"
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestErrorEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UnauthorizedError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedErrorEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SessionNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionNotFoundErrorEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Check the session's recorded feature branch against its repository default branch. Unknown status is never treated as merged. Works after the session's worktree has been removed.",
+        "summary": "Session branch merge status"
+      }
+    },
     "/api/session": {
       "get": {
         "tags": ["session"],
@@ -10106,6 +10174,7 @@
                     "session.model.selected",
                     "session.moved",
                     "session.renamed",
+                    "session.branch.updated",
                     "session.metadata.updated",
                     "session.permissions",
                     "session.viewed",
@@ -10215,6 +10284,7 @@
                           "session.model.selected",
                           "session.moved",
                           "session.renamed",
+                          "session.branch.updated",
                           "session.metadata.updated",
                           "session.permissions",
                           "session.viewed",
@@ -15703,6 +15773,278 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/Config.Patch"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/experimental/push/key": {
+      "get": {
+        "tags": ["push"],
+        "operationId": "experimental.push.key",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "publicKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["publicKey"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestErrorEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UnauthorizedError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedErrorEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Experimental: may change without compatibility guarantees.",
+        "summary": "Get Web Push public key"
+      }
+    },
+    "/api/experimental/push/status": {
+      "post": {
+        "tags": ["push"],
+        "operationId": "experimental.push.status",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["enabled"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestErrorEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UnauthorizedError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedErrorEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Experimental: may change without compatibility guarantees.",
+        "summary": "Check this push subscription",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "endpoint": {
+                    "$ref": "#/components/schemas/Push.Endpoint"
+                  }
+                },
+                "required": ["endpoint"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/experimental/push/subscription": {
+      "put": {
+        "tags": ["push"],
+        "operationId": "experimental.push.subscribe",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "<No Content>"
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestErrorEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UnauthorizedError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedErrorEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Experimental: may change without compatibility guarantees.",
+        "summary": "Enable or update Web Push",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Push.Registration"
+              }
+            }
+          },
+          "required": true
+        }
+      },
+      "delete": {
+        "tags": ["push"],
+        "operationId": "experimental.push.unsubscribe",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "<No Content>"
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestErrorEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UnauthorizedError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedErrorEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Experimental: may change without compatibility guarantees.",
+        "summary": "Disable Web Push on this device",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "endpoint": {
+                    "$ref": "#/components/schemas/Push.Endpoint"
+                  }
+                },
+                "required": ["endpoint"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/experimental/push/test": {
+      "post": {
+        "tags": ["push"],
+        "operationId": "experimental.push.test",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "<No Content>"
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestErrorEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UnauthorizedError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedErrorEncoded"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailableError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableErrorEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Experimental: may change without compatibility guarantees.",
+        "summary": "Send a test push notification",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "endpoint": {
+                    "$ref": "#/components/schemas/Push.Endpoint"
+                  }
+                },
+                "required": ["endpoint"],
+                "additionalProperties": false
               }
             }
           },
@@ -21885,6 +22227,98 @@
         "required": ["ticket", "expires_in"],
         "additionalProperties": false
       },
+      "Push.Endpoint": {
+        "type": "string",
+        "maxLength": 2048
+      },
+      "Push.Registration": {
+        "type": "object",
+        "properties": {
+          "subscription": {
+            "$ref": "#/components/schemas/Push.Subscription"
+          },
+          "path": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "events": {
+            "type": "object",
+            "properties": {
+              "agent": {
+                "type": "boolean"
+              },
+              "permissions": {
+                "type": "boolean"
+              },
+              "questions": {
+                "type": "boolean"
+              },
+              "errors": {
+                "type": "boolean"
+              }
+            },
+            "required": ["agent", "permissions", "questions", "errors"],
+            "additionalProperties": false
+          },
+          "labels": {
+            "type": "object",
+            "properties": {
+              "ready": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160
+              },
+              "question": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160
+              },
+              "permission": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160
+              },
+              "error": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160
+              },
+              "test": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160
+              }
+            },
+            "required": ["ready", "question", "permission", "error", "test"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["subscription", "path", "events", "labels"],
+        "additionalProperties": false
+      },
+      "Push.Subscription": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "$ref": "#/components/schemas/Push.Endpoint"
+          },
+          "keys": {
+            "type": "object",
+            "properties": {
+              "p256dh": {
+                "type": "string"
+              },
+              "auth": {
+                "type": "string"
+              }
+            },
+            "required": ["p256dh", "auth"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["endpoint", "keys"],
+        "additionalProperties": false
+      },
       "Reference.GitSource": {
         "type": "object",
         "properties": {
@@ -22552,6 +22986,31 @@
         "required": ["_tag", "message"],
         "additionalProperties": false
       },
+      "Session.Branch": {
+        "type": "object",
+        "properties": {
+          "directory": {
+            "$ref": "#/components/schemas/AbsolutePath"
+          },
+          "repository": {
+            "$ref": "#/components/schemas/AbsolutePath"
+          },
+          "name": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "commit": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          }
+        },
+        "required": ["directory", "repository", "name", "target", "commit"],
+        "additionalProperties": false
+      },
       "Session.Event.Durable": {
         "anyOf": [
           {
@@ -22568,6 +23027,9 @@
           },
           {
             "$ref": "#/components/schemas/session.renamed"
+          },
+          {
+            "$ref": "#/components/schemas/session.branch.updated"
           },
           {
             "$ref": "#/components/schemas/session.metadata.updated"
@@ -23110,6 +23572,9 @@
           "title": {
             "type": "string"
           },
+          "branch": {
+            "$ref": "#/components/schemas/Session.Branch"
+          },
           "subpath": {
             "$ref": "#/components/schemas/RelativePath"
           },
@@ -23127,6 +23592,26 @@
           }
         },
         "required": ["id", "projectID", "cost", "tokens", "time", "location"],
+        "additionalProperties": false
+      },
+      "Session.Merge": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": ["unknown", "unmerged", "merged"]
+          },
+          "branch": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": ["state"],
         "additionalProperties": false
       },
       "Session.Message.AgentSelected": {
@@ -25067,6 +25552,9 @@
             "$ref": "#/components/schemas/session.renamed"
           },
           {
+            "$ref": "#/components/schemas/session.branch.updated"
+          },
+          {
             "$ref": "#/components/schemas/session.metadata.updated"
           },
           {
@@ -26991,6 +27479,58 @@
               }
             },
             "required": ["sessionID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "created", "type", "durable", "data"],
+        "additionalProperties": false
+      },
+      "session.branch.updated": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Event.ID"
+          },
+          "created": {
+            "type": "number"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.branch.updated"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "$ref": "#/components/schemas/Event.Seq"
+              },
+              "version": {
+                "$ref": "#/components/schemas/Event.VersionEncoded_c77c5abcb68d"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/Location.Ref"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "$ref": "#/components/schemas/Session.ID"
+              },
+              "branch": {
+                "$ref": "#/components/schemas/Session.Branch"
+              }
+            },
+            "required": ["sessionID", "branch"],
             "additionalProperties": false
           }
         },
@@ -30549,6 +31089,9 @@
     {
       "name": "config",
       "description": "Location-scoped configuration routes."
+    },
+    {
+      "name": "push"
     }
   ]
 }
