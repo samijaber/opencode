@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from "@playwright/test"
+import { expect, test, type Page } from "@playwright/test"
 import { seed, sessionHref, type SeedInput } from "../utils/app"
 import { browseFiles, openFileLauncher } from "../utils/side-panel"
 import { fixture, mockStressTimeline } from "../utils/session-fixture"
@@ -16,9 +16,7 @@ async function openStress(page: Page, extra: SeedInput = {}) {
 }
 
 for (const position of ["top", "bottom"] as const) {
-  test(`mobile session tabs switch views and work with ${position} navigation`, async ({
-    page,
-  }) => {
+  test(`mobile session tabs switch views and work with ${position} navigation`, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await mockStressTimeline(page, { fileList: () => [] })
     await openStress(page, {
@@ -384,24 +382,7 @@ test.describe("touch", () => {
       await expect(drawer).not.toHaveAttribute("data-transitioning")
     })
 
-    test("reorders session tabs with touch", async ({ page }) => {
-      const tabs = page.locator('[data-slot="vertical-tabs"] a')
-      await expect(tabs).toContainText([fixture.expected.sourceTitle, fixture.expected.targetTitle])
-      const target = tabs.filter({ hasText: fixture.expected.targetTitle })
-      const source = tabs.filter({ hasText: fixture.expected.sourceTitle })
-      const targetBox = await target.boundingBox()
-      const sourceBox = await source.boundingBox()
-      expect(targetBox).not.toBeNull()
-      expect(sourceBox).not.toBeNull()
-
-      await touchDrag(page, source, {
-        from: { x: sourceBox!.x + sourceBox!.width / 2, y: sourceBox!.y + sourceBox!.height / 2 },
-        to: { x: targetBox!.x + targetBox!.width / 2, y: targetBox!.y + targetBox!.height / 2 },
-      })
-
-      await expect(tabs).toContainText([fixture.expected.targetTitle, fixture.expected.sourceTitle])
-    })
-
+    // Mobile tabs deliberately do not reorder: tabs.spec.ts's "swiping open tabs" keeper proves native scrolling.
     test("dismisses a touch context menu by tapping outside", async ({ page }) => {
       const drawer = page.locator('[data-slot="mobile-tabs-drawer"]')
       const tab = drawer.locator('[data-slot="tab-link"]').filter({ hasText: fixture.expected.sourceTitle })
@@ -424,19 +405,3 @@ test.describe("touch", () => {
     })
   })
 })
-
-async function touchDrag(
-  page: Page,
-  source: Locator,
-  input: { from: { x: number; y: number }; to: { x: number; y: number } },
-) {
-  const client = await page.context().newCDPSession(page)
-  await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ ...input.from, id: 1 }] })
-  await client.send("Input.dispatchTouchEvent", {
-    type: "touchMove",
-    touchPoints: [{ x: (input.from.x + input.to.x) / 2, y: (input.from.y + input.to.y) / 2, id: 1 }],
-  })
-  await expect(source).toHaveCount(2)
-  await client.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ ...input.to, id: 1 }] })
-  await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] })
-}
