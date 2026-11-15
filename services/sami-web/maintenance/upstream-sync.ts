@@ -163,6 +163,11 @@ if (import.meta.main) {
     preview: args.includes("--preview"),
     gates: [
       { name: "Frozen dependency install", args: [...bun, "install", "--frozen-lockfile"] },
+      {
+        name: "Pinned browsers for custom layout and touch tests",
+        cwd: "services/sami-web",
+        args: [...bun, "node_modules/@playwright/test/cli.js", "install", "chromium", "webkit"],
+      },
       { name: "Full lint and typecheck", args: [...bun, "run", "check"] },
       {
         name: "Custom backend push delivery and persistence",
@@ -182,8 +187,9 @@ if (import.meta.main) {
           "run",
           "test:e2e:built",
           "e2e/regression/tabs.spec.ts",
+          "e2e/regression/settings.spec.ts",
           "--grep",
-          "custom |mobile tab picker scrolls",
+          "custom |draft tab visibility|shared tab dismissal|mobile tab picker scrolls|iPhone background notifications",
           "--workers=1",
           "--retries=0",
         ],
