@@ -2378,16 +2378,21 @@ test("loads a tab's transcript while the pointer rests on it, and not when it pa
   const message = (id: string) => page.locator(`[data-timeline-virtual-content] [data-message-id="msg_${id}"]`)
   await expect(message(a.id)).toBeVisible()
 
-  // Raw moves keep the pass well under the dwell, which hover() actionability checks can exceed on slow runners.
+  // Freeze the dwell clock: protocol round trips can exceed it on Windows even between raw moves.
+  const now = Date.now()
+  await page.clock.install({ time: new Date(now) })
+  await page.clock.pauseAt(new Date(now + 1000))
   const [passed, rest] = await Promise.all([tab(c.id).boundingBox(), tab(a.id).boundingBox()])
 
   await page.mouse.move(passed!.x + passed!.width / 2, passed!.y + passed!.height / 2)
   await page.mouse.move(rest!.x + rest!.width / 2, rest!.y + rest!.height / 2)
   await tab(b.id).hover()
+  await page.clock.fastForward(1000)
   await expect.poll(() => requested.includes(b.id)).toBe(true)
   // A dwell started by the pass would have fired before the one on the rested tab.
   expect(requested).not.toContain(c.id)
 
+  await page.clock.resume()
   await tab(b.id).click()
   await expect(message(b.id)).toBeVisible()
   expect(requested.filter((id) => id === b.id)).toHaveLength(1)
