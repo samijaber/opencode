@@ -107,7 +107,8 @@ jobs:
           git config --global user.name "opencode"
 
       - name: Install browsers for Hub tests
-        run: bun x playwright install --with-deps chromium webkit
+        working-directory: services/sami-web
+        run: bun node_modules/@playwright/test/cli.js install --with-deps chromium webkit
 
       - name: Run unit tests
         timeout-minutes: 20
