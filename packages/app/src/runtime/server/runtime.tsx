@@ -263,7 +263,7 @@ function createServerController(
 
   onCleanup(
     data.on("session.viewed", (event) => {
-      queryClient.setQueryData<SessionInfo[]>(["home-sessions", conn], (current) =>
+      queryClient.setQueriesData<SessionInfo[]>({ queryKey: ["home-sessions", conn] }, (current) =>
         current?.map((session) =>
           session.id === event.data.sessionID && event.data.idle > (session.time.viewed ?? -Infinity)
             ? { ...session, time: { ...session.time, viewed: event.data.idle } }
