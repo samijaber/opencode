@@ -598,6 +598,11 @@ for (const [tabLayout, direction, label] of [
       seed: {
         tabs: [a.id, { draft: "draft_bulk_close", directory: "C:/OpenCode/Tabs" }, b.id, c.id],
         settings: { appearance: { tabLayout } },
+        storage: {
+          [draftPromptKey("draft_bulk_close")]: {
+            prompt: [{ type: "text", content: "Retain this draft", start: 0, end: 17 }],
+          },
+        },
       },
     })
     await openWithDirection(page, sessionHref(a.id), direction)

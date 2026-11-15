@@ -37,6 +37,11 @@ test.each(["merge", "conflict", "failed-check", "concurrent-push", "preview", "c
     const upstream = await git("rev-parse", "HEAD")
     await Bun.write(path.join(fixture.source, "uncommitted.txt"), "user work must survive\n")
     const state = path.join(root.path, "state")
+    const previous = { base: "previous", upstream: "previous", count: 1, status: "blocked", reason: "stale failure" }
+    if (mode === "current" || mode === "check") {
+      await mkdir(state, { recursive: true })
+      await Bun.write(path.join(state, "status.json"), JSON.stringify(previous))
+    }
     const gate = path.join(root.path, "gate.ts")
     const concurrent =
       mode === "concurrent-push"
@@ -79,6 +84,7 @@ test.each(["merge", "conflict", "failed-check", "concurrent-push", "preview", "c
     if (mode === "check" || mode === "current") {
       expect(result.status).toBe(mode === "check" ? "available" : "current")
       expect(await Bun.file(path.join(root.path, "gate-ran")).exists()).toBe(false)
+      expect(await Bun.file(path.join(state, "status.json")).json()).toEqual(mode === "check" ? previous : result)
       return
     }
     expect(result.status).toBe("blocked")

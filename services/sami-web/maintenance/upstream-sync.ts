@@ -37,7 +37,13 @@ export async function reconcile(options: Options): Promise<Status> {
     const upstream = await git("rev-parse", "FETCH_HEAD")
     const count = Number(await git("rev-list", "--count", `${base}..${upstream}`))
     const snapshot = { base, upstream, count }
-    if (!count || options.check) return { ...snapshot, status: count ? "available" : "current" }
+    if (!count || options.check) {
+      const status = { ...snapshot, status: count ? "available" : "current", checkedAt: new Date().toISOString() }
+      // Manual reconciliation can make an old failure current without another merge. Clear that stale status.
+      if (!options.check)
+        await Bun.write(path.join(options.state, "status.json"), JSON.stringify(status, null, 2) + "\n")
+      return status
+    }
 
     const previous = await (Bun.file(path.join(options.state, "status.json")).json() as Promise<Status>).catch(
       () => undefined,
