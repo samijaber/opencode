@@ -85,6 +85,8 @@ Conflicts or failed checks retain their checkout and write `status.json`. A sing
 
 The inherited `triage-*` workflows are upstream-only and disabled on the fork. They are not update jobs. In particular, the unguarded pull-request cleanup script targets `anomalyco/opencode`, where a fork Actions token cannot write; giving it more credentials is not the fix. Keep normal fork verification workflows enabled.
 
+Fork verification uses GitHub-hosted Ubuntu/Windows runners; upstream retains Blacksmith. Do not leave fork checks queued for upstream-only runner labels. Both lint/typecheck and test workflows include the fork's `main` branch, including changes pushed by the daily merge.
+
 Run the installed bundle using the same pinned mise runtime as the scheduler:
 
 ```sh
