@@ -11,6 +11,7 @@ import { useSettings } from "@/settings/model"
 
 export function SettingsPush() {
   const platform = usePlatform()
+
   return (
     <Show when={platform.platform === "web"}>
       <WebPushSettings />
@@ -22,17 +23,23 @@ function WebPushSettings() {
   const global = useGlobal()
   const language = useLanguage()
   const settings = useSettings()
+
   const sdk = createMemo(() => {
     const conn = global.servers
       .list()
       .find((item) => ServerConnection.http(item)?.url.replace(/\/$/, "") === location.origin)
+
     return conn ? global.serverCtx(ServerConnection.key(conn))?.sdk : undefined
   })
+
   const ios =
     /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+
   const install = ios && !isStandalone()
+
   const supported =
     window.isSecureContext && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window
+
   const [state, setState] = createStore({
     loading: true,
     busy: false,
@@ -44,10 +51,13 @@ function WebPushSettings() {
   })
 
   const subscription = async () => (await navigator.serviceWorker.getRegistration("/"))?.pushManager.getSubscription()
+
   const save = async (sub: PushSubscription) => {
     const client = sdk()
+
     if (!client) throw new Error("Server unavailable")
     const json = sub.toJSON()
+
     if (!json.keys?.p256dh || !json.keys.auth) throw new Error("Subscription keys unavailable")
     await client.api.experimental.push.subscribe({
       subscription: { endpoint: sub.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } },
@@ -70,14 +80,17 @@ function WebPushSettings() {
 
   const load = async () => {
     setState({ loading: true, error: false })
+
     if (!supported || install) return
     const client = sdk()
+
     if (!client) throw new Error("Server unavailable")
     const key = await client.api.experimental.push.key()
     setState("publicKey", key.publicKey)
     const sub = await subscription()
     setState("enabled", sub ? (await client.api.experimental.push.status({ endpoint: sub.endpoint })).enabled : false)
   }
+
   onMount(
     () =>
       void load()
@@ -101,12 +114,15 @@ function WebPushSettings() {
     // iOS requires permission from a user gesture, before any unrelated awaits.
     const permission = await Notification.requestPermission()
     setState("blocked", permission === "denied")
+
     if (permission !== "granted") return
     await navigator.serviceWorker.register("/sw.js")
     const worker = await navigator.serviceWorker.ready
+
     const sub =
       (await worker.pushManager.getSubscription()) ??
       (await worker.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: state.publicKey }))
+
     settings.notifications.setAgent(true)
     await save(sub)
     setState("enabled", true)
@@ -114,19 +130,24 @@ function WebPushSettings() {
 
   const disable = async () => {
     const client = sdk()
+
     if (!client) throw new Error("Server unavailable")
     const sub = await subscription()
+
     if (sub) {
       await client.api.experimental.push.unsubscribe({ endpoint: sub.endpoint })
       await sub.unsubscribe()
     }
+
     setState({ enabled: false, sent: false })
   }
 
   const test = async () => {
     const client = sdk()
+
     if (!client) throw new Error("Server unavailable")
     const sub = await subscription()
+
     if (!sub) throw new Error("Subscription unavailable")
     await client.api.experimental.push.test({ endpoint: sub.endpoint })
     setState("sent", true)

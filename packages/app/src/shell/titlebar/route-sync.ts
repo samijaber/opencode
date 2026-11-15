@@ -149,13 +149,18 @@ export function createRouteTabSync() {
     if (tabs.ready()) {
       if (matched?.route !== route) matched = undefined
       const tab = currentTab()
+
       if (tab) matched = { route, index: tabs.store.indexOf(tab) }
+
       // A shared-window dismissal must leave the old route, not just stop re-adding its tab.
       if (!tab && matched) {
         const next = tabs.store.slice(matched.index).find(tabs.visible) ?? tabs.store.findLast(tabs.visible)
         matched = undefined
+
         if (next) tabs.select(next)
+
         if (!next) navigate("/")
+
         return
       }
     }

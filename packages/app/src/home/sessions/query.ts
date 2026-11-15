@@ -32,16 +32,19 @@ export function createRecentSessionIndex(
         const now = Date.now()
         let retained: SessionInfo[] = []
         let cursor: string | undefined
+
         for (;;) {
           const response = await ctx.sdk.api.session.list(
-            { limit: HOME_SESSION_PAGE_LIMIT, order: "desc", parentID: null, ...(cursor ? { cursor } : {}) },
+            { limit: HOME_SESSION_PAGE_LIMIT, order: "desc", parentID: null, cursor },
             { signal },
           )
+
           retained = retainHomeSessions(
             mergeHomeSessionIndex(retained, parseHomeSessionIndex(response.data)),
             HOME_SESSION_LIMIT,
             now,
           )
+
           if (!response.cursor.next || response.data.length < HOME_SESSION_PAGE_LIMIT) return retained
           cursor = response.cursor.next
         }

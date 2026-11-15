@@ -424,6 +424,7 @@ export const { use: useTabs, provider: TabsProvider } = createSimpleContext({
 
       // Closing the tab the route shows always moves the route, so nothing re-adds the tab for it.
       const listed = store.filter(visible)
+
       const nextTab = nextTabAfterClose(
         listed,
         listed.indexOf(tab),

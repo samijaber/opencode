@@ -23,12 +23,16 @@ export function SessionHistory(props: { currentTab?: Tab; onNavigate?: () => voi
   const layout = useLayout()
   const tabs = useTabs()
   const language = useLanguage()
+
   const connection = createMemo(() => {
     const key = props.currentTab?.server ?? layout.home.selection().server
+
     return servers.visible.find((item) => ServerConnection.key(item) === key) ?? servers.visible[0]
   })
+
   const context = useServerCtx(connection)
   const index = createRecentSessionIndex(context, connection)
+
   const groups = createMemo(() =>
     groupSessions(
       buildHomeSessionRecords({
@@ -77,6 +81,7 @@ export function SessionHistory(props: { currentTab?: Tab; onNavigate?: () => voi
                     () => true,
                     () => record().session,
                   )
+
                   return (
                     <a
                       href={sessionHref(ServerConnection.key(connection()!), record().session.id)}
@@ -96,6 +101,7 @@ export function SessionHistory(props: { currentTab?: Tab; onNavigate?: () => voi
                         event.preventDefault()
                         const conn = connection()
                         const ctx = context()
+
                         if (!conn || !ctx) return
                         ctx.data.session.remember(record().session)
                         ctx.projects.touch(record().project.worktree)

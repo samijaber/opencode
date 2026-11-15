@@ -698,14 +698,18 @@ export function persisted<S extends Schema.ConstraintCodec<object, unknown>>(
     sync: [
       (receive) => {
         if (channel) messageSync(channel)[0](receive)
+
         if (isDesktop || draft) return
         const name = config.storage ? `${config.storage}:${config.key}` : config.key
+
         if (!isSharedPreference(name)) return
+
         const changed = (event: StorageEvent) => {
           if (event.storageArea !== localStorage || event.key !== name) return
           cacheDelete(name)
           receive({ key: config.key, newValue: event.newValue, url: location.href, timeStamp: event.timeStamp })
         }
+
         window.addEventListener("storage", changed)
         onCleanup(() => window.removeEventListener("storage", changed))
       },

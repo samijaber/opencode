@@ -24,6 +24,7 @@ const clicks: Array<() => void> = []
 const selected: string[] = []
 
 const dismissed: string[] = []
+
 const desktopStorage = new Map<string, AsyncStorage>()
 
 const tabs = {

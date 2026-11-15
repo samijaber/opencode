@@ -108,6 +108,7 @@ test.describe("shared tab dismissal", () => {
     const origin = "https://opencode.samijaber.com"
     const other = await context.newPage()
     const sessions = [a, b].map((item) => session({ ...item, directory: "C:/OpenCode/SharedTabs" }))
+
     for (const target of [page, other]) {
       await serveAppOrigin(target, origin, baseURL)
       await mockServers(target, {
@@ -124,6 +125,7 @@ test.describe("shared tab dismissal", () => {
         tabs: [a, b].map((item) => ({ session: item.id, server: origin })),
       })
     }
+
     await page.goto(origin + sessionHref(a.id, origin))
     await expectSessionTitle(page, a.title)
     await other.goto(origin + sessionHref(b.id, origin))
@@ -172,15 +174,19 @@ test.describe("shared tab dismissal", () => {
 
 test("custom recents update remote read markers while the mobile picker is closed", async ({ page }) => {
   const idle = Date.now()
+
   const workspace = await mockWorkspace(page, {
     name: "Unread",
     sessions: [a, { ...b, directory: "C:/OpenCode/Other", time: { created: idle, updated: idle, idle } }],
     seed: { tabs: [a.id], settings: { appearance: { tabLayout: "vertical" } } },
   })
+
   await page.goto(sessionHref(a.id))
+
   const recent = page
     .locator('[data-slot="vertical-tabs-sidebar"]')
     .getByRole("navigation", { name: "Recent sessions" })
+
   const row = recent.getByRole("link", { name: b.title, exact: true })
   await expect(row.locator('[data-slot="project-avatar-unread-dot"]')).toBeVisible()
   await page.setViewportSize({ width: 390, height: 844 })
@@ -196,9 +202,11 @@ test("custom recents update remote read markers while the mobile picker is close
   ])
   await page.getByRole("button", { name: "Tabs", exact: true }).click()
   const drawer = page.getByRole("dialog", { name: "Tabs", exact: true })
+
   const mobileRow = drawer
     .getByRole("navigation", { name: "Recent sessions" })
     .getByRole("link", { name: b.title, exact: true })
+
   await expect(mobileRow).toBeVisible()
   await expect(mobileRow.locator('[data-slot="project-avatar-unread-dot"]')).toHaveCount(0)
   await mobileRow.click()
@@ -220,9 +228,11 @@ test("custom recents retain historical conversations alongside upstream tabs", a
     seed: { tabs: [a.id], settings: { appearance: { tabLayout: "vertical" } } },
   })
   await page.goto(sessionHref(a.id))
+
   const recent = page
     .locator('[data-slot="vertical-tabs-sidebar"]')
     .getByRole("navigation", { name: "Recent sessions" })
+
   await expect(recent.getByRole("heading")).toHaveText(["Today", "Yesterday", "Older"])
   await recent.getByRole("link", { name: b.title, exact: true }).click()
   await expectPath(page, sessionHref(b.id))
@@ -246,6 +256,7 @@ test("custom merged badges do not change titles or appear for unknown branches",
     sessions: [a, b],
     sessionMerge: (id) => {
       requests.push(id)
+
       return { state: id === a.id ? "merged" : "unknown", target: "main" }
     },
   })
@@ -268,6 +279,7 @@ test("custom merged badges do not change titles or appear for unknown branches",
   ).toBeVisible()
   await page.clock.pauseAt(new Date(Date.now() + 1000))
   const checked = [...requests]
+
   // Keep idle tabs open beyond the former minute timer without hitting the SSE idle timeout.
   for (let minute = 0; minute < 3; minute++) {
     await page.clock.fastForward(30_000)
@@ -289,6 +301,7 @@ test.describe("custom mobile scrolling", () => {
       id: `ses_touch_${index}`,
       title: `Conversation ${index}`,
     }))
+
     await mockWorkspace(page, { name: "Touch", sessions })
     await page.goto(sessionHref(sessions[0].id))
     await page.getByRole("button", { name: "Tabs", exact: true }).tap()
@@ -298,10 +311,12 @@ test.describe("custom mobile scrolling", () => {
     await expect(drawer).not.toHaveAttribute("data-transitioning")
     const list = drawer.locator('[data-slot="mobile-tabs-drawer-list"]')
     const bounds = await drawer.locator('[data-slot="tab-link"]').filter({ hasText: sessions[2].title }).boundingBox()
+
     if (!bounds) throw new Error("Open tab has no bounds")
     const devtools = await page.context().newCDPSession(page)
     const x = bounds.x + bounds.width / 2
     const y = bounds.y + bounds.height / 2
+
     const scrolling = await list.evaluateHandle((element) => {
       const state = { ended: false }
       element.addEventListener(
@@ -311,9 +326,12 @@ test.describe("custom mobile scrolling", () => {
         },
         { once: true },
       )
+
       return state
     })
+
     await devtools.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] })
+
     for (let step = 1; step <= 10; step++)
       await devtools.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: y - step * 14 }] })
     await devtools.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] })

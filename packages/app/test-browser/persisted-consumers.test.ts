@@ -23,6 +23,7 @@ test("shared preferences update mounted consumers without a reload or a write-ba
           notify: async () => {},
         },
       )
+
       localStorage.setItem("settings.v3", '{"tabLayout":"vertical"}')
       window.dispatchEvent(
         new StorageEvent("storage", {
