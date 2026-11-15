@@ -48,7 +48,7 @@ jobs:
 
   test:
     name: Core (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ github.repository != 'anomalyco/opencode' && matrix.os == 'blacksmith-6vcpu-macos-15' && 'macos-15' || matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -105,6 +105,9 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Enable long dependency paths
         run: git config --global core.longpaths true
+      - name: Pin MSVC for Zig on ARM64
+        if: matrix.arch == 'arm64'
+        run: ./script/pin-msvc.ps1
       - uses: mlugg/setup-zig@8d6198c65fb0feaa111df26e6b467fea8345e46f # v2.0.5
         if: matrix.arch == 'x64'
         with:

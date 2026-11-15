@@ -106,6 +106,10 @@ const write = (href: string, body: string) => Bun.write(path.join(output, href),
 // The files the server render emitted that pages link (the fonts they preload and declare), beside the
 // client build's; the render's own code stays in the cache.
 const emitted = new Set<string>()
+// Copy before rendering: cp and Bun.write otherwise race to create the same output directories on Linux.
+await Promise.all(
+  docsSets.map((set) => cp(path.join(root, "public", set.base), path.join(output, set.base), { recursive: true })),
+)
 await Promise.all([
   ...docsSets.flatMap((set) =>
     render.docsSlugs[set.id].map(async (slug) => {
@@ -121,8 +125,6 @@ await Promise.all([
   write(`${v1Docs.base}llms.txt`, render.renderLlmsTxt(site, v1Docs, [await render.v1EnglishSection()])),
   // Only the latest docs are in the sitemap: the V1 docs are noindex.
   write(`${base}sitemap.xml`, render.renderSitemap(site)),
-  // The logos, images, favicon and generated files the pages link (the site build has copied them already).
-  ...docsSets.map((set) => cp(path.join(root, "public", set.base), path.join(output, set.base), { recursive: true })),
 ])
 
 await Promise.all(
