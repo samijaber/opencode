@@ -150,5 +150,5 @@ test.each([chromium, webkit])(
       await browser.close()
     }
   },
-  20_000,
-) // Two isolated browser processes and document navigations; no fixed sleeps.
+  60_000,
+) // Per engine: a real browser, two origins and eleven navigations, including offline recovery; no fixed sleeps.
