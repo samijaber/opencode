@@ -83,7 +83,7 @@ Only a passing merge is committed and pushed, using a normal fast-forward push a
 
 Conflicts or failed checks retain their checkout and write `status.json`. A single GitHub issue, **OpenCode upstream sync needs attention**, is created/updated with commit IDs and a short failure reason, never raw logs or credentials. Authenticated logs and daily history are at [the scheduler](https://hub.samijaber.com/verification/dags/opencode-upstream). Identical blocked commit pairs are not re-run until `--retry`; a new upstream/custom tip is checked automatically. Unexpected setup/network failures remain visible as failed Dagu jobs even if GitHub reporting is unavailable. A crash leaves the lock directory: confirm no sync is running before removing that empty lock with `rmdir`.
 
-The inherited `triage-close-prs`, `triage-close-issues`, and `triage-compliance-close` workflows are upstream-only and disabled on the fork. They are not update jobs. In particular, the unguarded pull-request cleanup script targets `anomalyco/opencode`, where a fork Actions token cannot write; giving it more credentials is not the fix. Keep normal fork verification workflows enabled.
+The inherited `triage-*` workflows are upstream-only and disabled on the fork. They are not update jobs. In particular, the unguarded pull-request cleanup script targets `anomalyco/opencode`, where a fork Actions token cannot write; giving it more credentials is not the fix. Keep normal fork verification workflows enabled.
 
 Run the installed bundle using the same pinned mise runtime as the scheduler:
 
