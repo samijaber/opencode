@@ -481,6 +481,8 @@ test("navigation replaces commands without retaining disposed owners", async ({ 
   await page.keyboard.press("ControlOrMeta+t")
   await expect(page).toHaveURL(/\/new-session\?/)
   await expect(editor).toBeEditable()
+  // This test needs retained drafts while navigating; abandoned empty drafts intentionally disappear.
+  await editor.fill("First retained draft")
   await editor.blur()
   await page.keyboard.press("Control+l")
   await expect(editor).toBeFocused()
@@ -500,6 +502,7 @@ test("navigation replaces commands without retaining disposed owners", async ({ 
     await page.getByRole("button", { name: "New session", exact: true }).click()
     await expect(tabs).toHaveCount(count)
     await expect(editor).toBeEditable()
+    await editor.fill(`Retained draft ${count}`)
   }
 
   await page.setViewportSize({ width: 600, height: 800 })

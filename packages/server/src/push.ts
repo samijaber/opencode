@@ -164,7 +164,7 @@ const layer = Layer.effect(
               case "session.execution.succeeded": {
                 const [message] = yield* sessions
                   .messages({ sessionID: session.id, type: "assistant", order: "desc", limit: 1 })
-                  .pipe(Effect.catch(() => Effect.succeed([])))
+                  .pipe(Effect.orElseSucceed(() => []))
                 if (message?.type !== "assistant" || !message.time.completed) return ""
                 // Never preview an older execution's answer after a control-only execution.
                 if (
@@ -217,10 +217,8 @@ const layer = Layer.effect(
           url: registration.path,
           tag: "opencode:test",
         }).pipe(
-          Effect.catch(() =>
-            Effect.fail(
-              new ServiceUnavailableError({ message: "Push delivery failed; try enabling notifications again" }),
-            ),
+          Effect.mapError(
+            () => new ServiceUnavailableError({ message: "Push delivery failed; try enabling notifications again" }),
           ),
         )
       }),

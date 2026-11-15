@@ -81,7 +81,7 @@ test("Hub dock, desktop rail and titlebars keep a compact application viewport w
   } finally {
     await browser.close()
   }
-}, 15_000) // Includes launching an isolated Chromium process, not a timer-based wait.
+}, 60_000) // Real Chromium launch and five isolated viewport contexts share CPU with the other package suites.
 
 test("body-portalled session drawers and dialogs stay between Hub bars, with reachable footer actions", async () => {
   const css = await Promise.all(
@@ -155,4 +155,4 @@ test("body-portalled session drawers and dialogs stay between Hub bars, with rea
   } finally {
     await browser.close()
   }
-}, 15_000) // Real Chromium layout, viewport insets and touch hit testing against the shipped overlay CSS.
+}, 60_000) // Three real browser contexts, two portal layouts each and touch hit testing; no timer-based waits.

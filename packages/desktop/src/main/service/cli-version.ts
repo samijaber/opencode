@@ -10,10 +10,14 @@ export function parseCliVersion(output: string) {
 export function serviceVersion(input: {
   readonly channel: "local" | "dev" | "beta" | "prod"
   readonly isolated?: boolean
+  readonly managed?: boolean
   readonly mode: "initial" | "reconnect"
   readonly version: string
 }) {
   if (input.mode === "reconnect") return undefined
+
+  // Owner-managed builds follow the separately verified backend, never the desktop release's version.
+  if (input.managed && !input.isolated) return undefined
 
   if (input.channel === "beta" && !input.isolated) return undefined
 
