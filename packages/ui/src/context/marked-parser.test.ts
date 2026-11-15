@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
-import { createMarkdownParser } from "./marked-parser"
+import { Lexer } from "marked"
+import { createMarkdownParser, markdownMath } from "./marked-parser"
 import { parseSmallMarkdown } from "./marked-base"
 
 const parser = createMarkdownParser()
@@ -84,12 +85,19 @@ test.each([
   expect(await parser.parse(text)).not.toContain("katex")
 })
 
-// Each repeated unit took seconds at this size when `start` retried the dollar regex from every `$` for every text token.
-test("lexes dollar-heavy paragraphs in near-linear time", () => {
+// Searching for valid math here retries the dollar regex across the remaining paragraph for every text token.
+// The hint must stop at the first candidate, even one the tokenizer will reject; do not assert wall-clock speed.
+test("the dollar start hint stops at the first candidate instead of scanning ahead for valid math", () => {
   const units = ["`a` $5 ", "$a ", "\\$$a", "$a\\\\\\ ", "It costs $5, ", "with `c` $x_1$ and "]
-  const startedAt = performance.now()
-  units.forEach((unit) => parser.lexer(unit.repeat(Math.ceil(10_000 / unit.length))))
-  expect(performance.now() - startedAt).toBeLessThan(500)
+  const extension = markdownMath.extensions?.find((item) => item.name === "inlineDollarKatex")
+
+  if (!extension || !("start" in extension) || !extension.start) throw new Error("Missing dollar start hint")
+  const start = extension.start.bind({ lexer: new Lexer() })
+  units.forEach((unit) => {
+    const text = unit.repeat(Math.ceil(10_000 / unit.length)) + "$x$"
+    expect(start(text)).toBe(unit.indexOf("$"))
+  })
+  expect(start("no delimiter")).toBeUndefined()
 })
 
 test("highlights fenced code with the app theme variables", async () => {
