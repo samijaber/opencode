@@ -3,7 +3,6 @@ import {
   createEffect,
   createMemo,
   createSignal,
-  For,
   type JSX,
   onCleanup,
   onMount,
@@ -64,7 +63,7 @@ export const previousSessionCommand = { id: "session.previous", keybind: "alt+ar
 
 export const nextSessionCommand = { id: "session.next", keybind: "alt+arrowdown" }
 
-// A row the For loop still renders for a tab just removed from the strip.
+// A row still rendered for a tab just removed from the strip.
 const hiddenTabView: SessionTabView = {
   phase: "loading",
   visible: false,
@@ -921,13 +920,23 @@ export function TitlebarTabStrip(props: {
             classList={{ "flex-row items-center": !vertical(), "flex-col items-stretch": vertical() }}
             ref={listRef}
           >
-            <Show when={sections()} fallback={<For each={props.tabs}>{(tab) => renderTab(tab)}</For>}>
+            {/* Shared-storage reconciliation can reuse an array slot for a different tab. Key by tab identity. */}
+            <Show
+              when={sections()}
+              fallback={
+                <Key each={props.tabs} by={tabKey}>
+                  {(tab) => renderTab(tab())}
+                </Key>
+              }
+            >
               {(list) => (
                 <Key each={list()} by={(section) => section.key}>
                   {(section) => (
                     <>
                       {section().header}
-                      <For each={section().tabs}>{(tab) => renderTab(tab, section())}</For>
+                      <Key each={section().tabs} by={tabKey}>
+                        {(tab) => renderTab(tab(), section())}
+                      </Key>
                       {section().footer}
                     </>
                   )}

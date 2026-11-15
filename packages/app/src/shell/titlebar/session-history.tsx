@@ -123,7 +123,11 @@ export function SessionHistory(props: { currentTab?: Tab; onNavigate?: () => voi
                         <ActivityRing />
                       </Show>
                       <span class="shrink-0 whitespace-nowrap text-11-medium text-v2-text-text-muted">
-                        {getRelativeTime(new Date(record().session.time.updated).toISOString(), language.t, language.intl())}
+                        {getRelativeTime(
+                          new Date(record().session.time.updated).toISOString(),
+                          language.t,
+                          language.intl(),
+                        )}
                       </span>
                     </a>
                   )

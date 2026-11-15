@@ -7,7 +7,11 @@ body[data-hub-app=opencode] :is([data-slot=mobile-drawer-overlay],[data-componen
 top:var(--hub-bar)!important;right:0!important;bottom:var(--hub-dock)!important;left:var(--hub-rail)!important
 }
 body[data-hub-app=opencode] [data-dialog-layer]{contain:layout}
-body[data-hub-app=opencode] [data-slot=dialog-container]{max-height:100%;max-width:100%}
+body[data-hub-app=opencode] [data-slot=dialog-container]{max-height:100%!important;max-width:100%}
+/* Upstream anchors large dialogs using the full viewport; portals only have Hub's application viewport. */
+body[data-hub-app=opencode] [data-component=dialog-v2]:is([data-anchored],[data-size=large],[data-size=x-large]) [data-slot=dialog-container]{
+margin-block-start:max(0px,calc((100dvh - var(--hub-bar) - var(--hub-dock) - var(--dialog-height))/2))!important
+}
 body[data-hub-app=opencode] [data-slot=mobile-drawer-content]{
 bottom:var(--hub-dock)!important;inset-inline-start:var(--hub-rail)!important;
 max-height:min(75dvh,calc(100dvh - var(--hub-bar) - var(--hub-dock) - 16px))!important;padding-bottom:12px!important

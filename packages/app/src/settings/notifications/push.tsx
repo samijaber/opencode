@@ -23,7 +23,9 @@ function WebPushSettings() {
   const language = useLanguage()
   const settings = useSettings()
   const sdk = createMemo(() => {
-    const conn = global.servers.list().find((item) => ServerConnection.http(item)?.url.replace(/\/$/, "") === location.origin)
+    const conn = global.servers
+      .list()
+      .find((item) => ServerConnection.http(item)?.url.replace(/\/$/, "") === location.origin)
     return conn ? global.serverCtx(ServerConnection.key(conn))?.sdk : undefined
   })
   const ios =
