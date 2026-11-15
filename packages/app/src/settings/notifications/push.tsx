@@ -3,6 +3,7 @@ import { createStore } from "solid-js/store"
 import { Button } from "@opencode/ui/button"
 import { base64Encode } from "@opencode/util/encode"
 import { useGlobal } from "@/runtime/server/runtime"
+import { ServerConnection } from "@/runtime/server/registry"
 import { usePlatform } from "@/runtime/platform/platform"
 import { isStandalone } from "@/runtime/platform/pwa"
 import { useLanguage } from "@/runtime/i18n/language"
@@ -22,8 +23,8 @@ function WebPushSettings() {
   const language = useLanguage()
   const settings = useSettings()
   const sdk = createMemo(() => {
-    const conn = global.servers.list().find((item) => item.http.url.replace(/\/$/, "") === location.origin)
-    return conn ? global.ensureServerCtx(conn).sdk : undefined
+    const conn = global.servers.list().find((item) => ServerConnection.http(item)?.url.replace(/\/$/, "") === location.origin)
+    return conn ? global.serverCtx(ServerConnection.key(conn))?.sdk : undefined
   })
   const ios =
     /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
