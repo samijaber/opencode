@@ -37,6 +37,7 @@ test("exposes every standard HTTP API group", () => {
     "voice",
     "migration",
     "usage",
+    "push",
   ])
   expect(Object.keys(client.debug)).toEqual(["heapDump", "location"])
   expect(Object.keys(client.debug.location)).toEqual(["list", "evict"])
@@ -67,6 +68,7 @@ test("exposes every standard HTTP API group", () => {
     "migration",
     "usage",
     "config",
+    "push",
   ])
   expect(Object.keys(client.experimental.job)).toEqual(["list"])
   expect(Object.keys(client.experimental.session)).toEqual([
@@ -80,6 +82,7 @@ test("exposes every standard HTTP API group", () => {
   ])
   expect(Object.keys(client.experimental.voice)).toEqual(["models", "session"])
   expect(Object.keys(client.experimental.usage)).toEqual(["limits"])
+  expect(Object.keys(client.experimental.push)).toEqual(["key", "status", "subscribe", "unsubscribe", "test"])
   expect(Object.keys(client.experimental.mcp)).toEqual(["add", "remove", "connect", "disconnect", "client"])
   expect(Object.keys(client.experimental.integration.wellknown)).toEqual(["add"])
   expect(Object.keys(client.experimental.file)).toEqual(["write", "watch", "unwatch"])
@@ -156,6 +159,11 @@ test("nests a method under client.experimental exactly when its route is experim
     "mcp.disconnect",
     "mcp.remove",
     "migration.v1.status",
+    "push.key",
+    "push.status",
+    "push.subscribe",
+    "push.test",
+    "push.unsubscribe",
     "session.export",
     "session.import",
     "session.instructions.entry.list",

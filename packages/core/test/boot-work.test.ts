@@ -141,10 +141,11 @@ const it = testEffect(
 )
 
 const expected = {
-  // Folder startup: project identity, VCS branch/remote reads and the Location's repository probe.
-  "boot: git spawns": 8,
-  // The step's snapshot: repository probe, snapshot init, diff, untracked files, ignore check, index and tree.
-  "turn: git spawns": 9,
+  // Project identity, VCS branch/remote reads and repository discovery, including the default-branch probes.
+  // Re-baselined from the recorded command trace on macOS and Windows; keep exact counts, not a looser ceiling.
+  "boot: git spawns": 11,
+  // Snapshot setup/index work plus the VCS branch/default-branch reads at the step boundary.
+  "turn: git spawns": 13,
   // Git is resolved once per process, before this test, and every spawn uses that resolution. On Windows the shell
   // tool's ShellSelect.gitbash() looks up git once to find Git Bash (cached per process), so one lookup is allowed.
   "boot + turn: git lookups beyond one": 0,
