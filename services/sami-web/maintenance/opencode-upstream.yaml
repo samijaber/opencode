@@ -8,3 +8,6 @@ env:
 steps:
   - id: sync
     run: /Users/samijaber/.local/bin/mise exec bun@1.4.4 -- bun /Users/samijaber/.local/share/opencode/upstream-sync/runner.js /Users/samijaber/.local/share/opencode/upstream-sync/repository.git /Users/samijaber/.local/share/opencode/upstream-sync/state
+    retry_policy:
+      limit: 2
+      interval_sec: 60

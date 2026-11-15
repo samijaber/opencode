@@ -165,6 +165,11 @@ if (import.meta.main) {
       { name: "Frozen dependency install", args: [...bun, "install", "--frozen-lockfile"] },
       { name: "Full lint and typecheck", args: [...bun, "run", "check"] },
       {
+        name: "Custom backend push delivery and persistence",
+        cwd: "packages/server",
+        args: [...bun, "test", "test/push.test.ts"],
+      },
+      {
         name: "Custom worker, Hub, shared-preference and maintenance tests",
         cwd: "services/sami-web",
         args: [...bun, "run", "test"],
@@ -185,6 +190,12 @@ if (import.meta.main) {
         env: { PLAYWRIGHT_PORT: "4473" },
       },
       { name: "Production custom frontend build", cwd: "services/sami-web", args: [...bun, "run", "build"] },
+      {
+        name: "Custom backend executable build",
+        cwd: "packages/cli",
+        args: [...bun, "run", "build", "--single", "--skip-install", "--skip-web-ui"],
+        env: { OPENCODE_CHANNEL: "latest", OPENCODE_VERSION: "0.0.0-sami-check" },
+      },
     ],
   })
   console.log(JSON.stringify(result, null, 2))

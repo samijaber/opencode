@@ -41,7 +41,14 @@ const connect = Effect.fn("BackgroundService.connect")(function* (mode: "initial
   const runFork = Effect.runForkWith(yield* Effect.context<FileSystem.FileSystem | Path.Path>())
   const isolated = !app.isPackaged && process.env.OPENCODE_DESKTOP_ISOLATED_SERVER === "1"
   const cli = yield* desktopCli.resolve
-  const version = serviceVersion({ channel: CHANNEL, isolated, mode, version: cli.version })
+
+  const version = serviceVersion({
+    channel: CHANNEL,
+    isolated,
+    managed: process.env.OPENCODE_MANAGED_BUILD === "1",
+    mode,
+    version: cli.version,
+  })
 
   if (isolated) process.env.XDG_STATE_HOME = app.getPath("userData")
   const client = yield* Effect.promise(() => import("@opencode/client/service"))

@@ -13,12 +13,10 @@ let probe: Promise<Endpoint | undefined> | undefined
 
 export function startSidecarProbe() {
   if (!app.isPackaged) return
-  const version = CHANNEL === "beta" ? undefined : bundledVersion()
+  const version = CHANNEL === "beta" || process.env.OPENCODE_MANAGED_BUILD === "1" ? undefined : bundledVersion()
 
   if (version === "") return
-  probe = import("@opencode/client/service")
-    .then(({ Service }) => Service.discover({ version }))
-    .catch(() => undefined)
+  probe = import("@opencode/client/service").then(({ Service }) => Service.discover({ version })).catch(() => undefined)
 }
 
 export function sidecarProbe() {
