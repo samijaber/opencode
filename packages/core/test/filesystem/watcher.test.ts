@@ -225,6 +225,40 @@ describe("Watcher lifecycle", () => {
     ),
   )
 
+  it.live("ends a deleted directory watch and observes edits after recreating the same path", () =>
+    withTmp((directory) =>
+      Effect.gen(function* () {
+        const watcher = yield* Watcher.Service
+        const target = path.join(directory, ".opencode")
+        const file = path.join(target, "opencode.json")
+        yield* Effect.forEach([0, 1, 2], () =>
+          Effect.gen(function* () {
+            yield* Effect.promise(() => fs.mkdir(target))
+            const ready = yield* Deferred.make<void>()
+            const changed = yield* Deferred.make<void>()
+            const consumer = yield* watcher
+              .subscribe({ path: target, type: "directory" }, Deferred.succeed(ready, undefined))
+              .pipe(
+                Effect.flatMap((updates) =>
+                  updates.pipe(
+                    Stream.tap((update) => (update.path === file ? Deferred.succeed(changed, undefined) : Effect.void)),
+                    Stream.runCollect,
+                  ),
+                ),
+                Effect.forkScoped({ startImmediately: true }),
+              )
+            yield* Deferred.await(ready)
+            yield* Effect.promise(() => fs.writeFile(file, "{}"))
+            yield* Deferred.await(changed).pipe(Effect.timeout("10 seconds"))
+            yield* Effect.promise(() => fs.rm(target, { recursive: true }))
+            const updates = yield* Fiber.join(consumer).pipe(Effect.timeout("10 seconds"))
+            expect(updates.at(-1)).toEqual({ path: target, type: "delete" })
+          }).pipe(Effect.scoped),
+        )
+      }).pipe(Effect.provide(AppNodeBuilder.build(Watcher.node))),
+    ),
+  )
+
   it.effect("interrupting a consumer interrupts a pending acquisition", () =>
     Effect.gen(function* () {
       const started = yield* Deferred.make<void>()

@@ -139,7 +139,11 @@ export const layer = (options?: Options) =>
             const subscription = yield* PubSub.subscribe(pubsub)
             if (yield* PubSub.isShutdown(pubsub)) return Stream.empty
             yield* onReady
-            return Stream.fromSubscription(subscription)
+            return Stream.fromSubscription(subscription).pipe(
+              Stream.takeUntil(
+                (update) => input.type === "directory" && update.path === target && update.type === "delete",
+              ),
+            )
           }),
         )
       })
@@ -252,14 +256,24 @@ function subscribeWindowsDirectory(input: Parameters<NativeInterface["subscribe"
     const { Glob } = yield* Effect.promise(() => import("@opencode/util/glob"))
     const ignored = input.ignore.map((pattern) => ({ pattern, path: path.resolve(input.target, pattern) }))
     return yield* Effect.try({
-      try: () =>
-        watch(input.target, { recursive: true }, (_event, file) => {
+      try: () => {
+        const subscription = watch(input.target, { recursive: true }, (_event, file) => {
+          // Bun 1.4.4/libuv reports a deleted Windows watch root as an absolute
+          // filename repeatedly. Stop it immediately: otherwise those events
+          // keep Config's debounce pending forever (oven-sh/bun#39827).
+          if (file && path.isAbsolute(file)) {
+            subscription.close()
+            input.publish({ path: input.target, type: "delete" })
+            return
+          }
           const target = file ? path.join(input.target, file) : input.target
           const relative = path.relative(input.target, target).split(path.sep).join("/")
           if (ignored.some((entry) => FSUtil.contains(entry.path, target) || Glob.match(entry.pattern, relative)))
             return
           input.publish({ path: target, type: "update" })
-        }),
+        })
+        return subscription
+      },
       catch: (error) => error,
     }).pipe(
       Effect.map((subscription) => {

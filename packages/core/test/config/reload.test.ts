@@ -186,6 +186,17 @@ describe("config plugin reloads", () => {
               const plugins = yield* Plugin.Service
               const references = yield* Reference.Service
               const host = yield* PluginHost.make(plugins, "test")
+              const waitReferences = (names: string[], phase: string) =>
+                waitUntil(
+                  references
+                    .list()
+                    .pipe(
+                      Effect.map(
+                        (items) =>
+                          items.length === names.length && items.every((item, index) => item.name === names[index]),
+                      ),
+                    ),
+                ).pipe(Effect.mapError((error) => new Error(`${input.file}: ${phase}: ${error.message}`)))
               yield* ConfigReferencePlugin.Plugin.effect(host)
               expect(yield* references.list()).toEqual([])
 
@@ -206,32 +217,24 @@ describe("config plugin reloads", () => {
                 await fs.mkdir(path.dirname(target), { recursive: true })
                 await fs.writeFile(target, JSON.stringify({ references: { docs: "./docs" } }))
               })
-              yield* waitUntil(
-                references.list().pipe(Effect.map((items) => items.some((item) => item.name === "docs"))),
-              )
+              yield* waitReferences(["docs"], "initial creation")
               expect((yield* references.list())[0]?.path).toBe(
                 AbsolutePath.make(path.join(path.dirname(target), "docs")),
               )
               yield* Effect.promise(() => fs.writeFile(target, JSON.stringify({ references: { next: "./next" } })))
-              yield* waitUntil(
-                references.list().pipe(Effect.map((items) => items.length === 1 && items[0]?.name === "next")),
-              )
+              yield* waitReferences(["next"], "first edit")
 
               yield* Effect.promise(() =>
                 fs.rm(input.file.includes(".opencode/") ? path.dirname(target) : target, { recursive: true }),
               )
-              yield* waitUntil(references.list().pipe(Effect.map((items) => items.length === 0)))
+              yield* waitReferences([], "deletion")
               yield* Effect.promise(async () => {
                 await fs.mkdir(path.dirname(target), { recursive: true })
                 await fs.writeFile(target, JSON.stringify({ references: { docs: "./docs" } }))
               })
-              yield* waitUntil(
-                references.list().pipe(Effect.map((items) => items.length === 1 && items[0]?.name === "docs")),
-              )
+              yield* waitReferences(["docs"], "recreation")
               yield* Effect.promise(() => fs.writeFile(target, JSON.stringify({ references: { next: "./next" } })))
-              yield* waitUntil(
-                references.list().pipe(Effect.map((items) => items.length === 1 && items[0]?.name === "next")),
-              )
+              yield* waitReferences(["next"], "edit after recreation")
             }).pipe(Effect.provide(liveConfig(project)))
           }),
         ),
