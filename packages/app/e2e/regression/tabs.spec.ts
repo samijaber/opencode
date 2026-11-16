@@ -317,28 +317,16 @@ test.describe("custom mobile scrolling", () => {
     const x = bounds.x + bounds.width / 2
     const y = bounds.y + bounds.height / 2
 
-    const scrolling = await list.evaluateHandle((element) => {
-      const state = { ended: false }
-      element.addEventListener(
-        "scrollend",
-        () => {
-          state.ended = true
-        },
-        { once: true },
-      )
-
-      return state
+    // The completed touch gesture has no momentum to consume the next tap.
+    // Windows Chromium can scroll these injected touches without emitting scrollend.
+    await devtools.send("Input.synthesizeScrollGesture", {
+      x,
+      y,
+      yDistance: -140,
+      gestureSourceType: "touch",
+      preventFling: true,
     })
-
-    await devtools.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] })
-
-    for (let step = 1; step <= 10; step++)
-      await devtools.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: y - step * 14 }] })
-    await devtools.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] })
     await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBeGreaterThan(20)
-    // A tap during native momentum stops the scroll rather than selecting the row on touch devices.
-    await expect.poll(() => scrolling.evaluate((state) => state.ended)).toBe(true)
-    await scrolling.dispose()
     await expect(titles).toHaveText(sessions.map((item) => item.title))
     await expectPath(page, sessionHref(sessions[0].id))
     await expect(drawer.getByRole("button", { name: "Settings", exact: true })).toBeInViewport()

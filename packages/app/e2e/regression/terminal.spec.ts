@@ -281,7 +281,7 @@ test("a dropped connection says the terminal disconnected and keeps its tab", as
   await expect(side(page).getByText("Terminal disconnected", { exact: true })).toBeVisible()
   await expect(side(page).getByRole("tab", { name: "Build", exact: true })).toHaveAttribute("aria-selected", "true")
   expect(persistentPty.sockets).toHaveLength(1)
-  expect(await terminalText(page, screen)).toBe("still-here")
+  await expect.poll(() => terminalText(page, screen)).toBe("still-here")
 })
 
 test("a terminal list that fails says why, and Try again lists the terminals", async ({ page }) => {
