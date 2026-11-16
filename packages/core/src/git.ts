@@ -51,6 +51,13 @@ const argumentBudget = process.platform === "win32" ? 24_000 : 128 * 1024
 const looseObjectLimit = 2048
 const packCountLimit = 16
 
+export interface PackOptions {
+  /** Minimum loose-object count before packing; defaults to 2048. */
+  readonly looseObjectLimit?: number
+  /** Minimum pack count before combining; defaults to 16. */
+  readonly packCountLimit?: number
+}
+
 export interface CaptureInput {
   readonly repository: Repository
   readonly scopes: readonly RelativePath[]
@@ -196,7 +203,7 @@ export interface Interface {
      * reachable or not. Returns without work below the thresholds; safe to run
      * concurrently with captures and with other processes.
      */
-    readonly pack: (repository: Repository) => Effect.Effect<void, OperationError>
+    readonly pack: (repository: Repository, options?: PackOptions) => Effect.Effect<void, OperationError>
   }
 }
 
@@ -1205,13 +1212,13 @@ const layer = Layer.effect(
      * the combined packs. Nothing is pruned, and objects are never delegated to the
      * source repository through alternates.
      */
-    const packObjects = Effect.fn("Git.objects.pack")(function* (repository: Repository) {
+    const packObjects = Effect.fn("Git.objects.pack")(function* (repository: Repository, options?: PackOptions) {
       const objects = path.join(repository.gitDirectory, "objects")
       const packDirectory = path.join(objects, "pack")
       const loose = yield* looseObjects(objects)
       const packs = yield* localPacks(packDirectory)
-      const combinePacks = packs.length >= packCountLimit
-      if (loose.length < looseObjectLimit && !combinePacks) return
+      const combinePacks = packs.length >= (options?.packCountLimit ?? packCountLimit)
+      if (loose.length < (options?.looseObjectLimit ?? looseObjectLimit) && !combinePacks) return
       yield* withPackLock(
         repository,
         Effect.gen(function* () {
