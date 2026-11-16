@@ -37,7 +37,13 @@ export async function reconcile(options: Options): Promise<Status> {
     const upstream = await git("rev-parse", "FETCH_HEAD")
     const count = Number(await git("rev-list", "--count", `${base}..${upstream}`))
     const snapshot = { base, upstream, count }
-    if (!count || options.check) return { ...snapshot, status: count ? "available" : "current" }
+    if (!count || options.check) {
+      const status = { ...snapshot, status: count ? "available" : "current", checkedAt: new Date().toISOString() }
+      // Manual reconciliation can make an old failure current without another merge. Clear that stale status.
+      if (!options.check)
+        await Bun.write(path.join(options.state, "status.json"), JSON.stringify(status, null, 2) + "\n")
+      return status
+    }
 
     const previous = await (Bun.file(path.join(options.state, "status.json")).json() as Promise<Status>).catch(
       () => undefined,
@@ -163,6 +169,11 @@ if (import.meta.main) {
     preview: args.includes("--preview"),
     gates: [
       { name: "Frozen dependency install", args: [...bun, "install", "--frozen-lockfile"] },
+      {
+        name: "Pinned browsers for custom layout and touch tests",
+        cwd: "services/sami-web",
+        args: [...bun, "node_modules/@playwright/test/cli.js", "install", "chromium", "webkit"],
+      },
       { name: "Full lint and typecheck", args: [...bun, "run", "check"] },
       {
         name: "Custom backend push delivery and persistence",
@@ -182,8 +193,9 @@ if (import.meta.main) {
           "run",
           "test:e2e:built",
           "e2e/regression/tabs.spec.ts",
+          "e2e/regression/settings.spec.ts",
           "--grep",
-          "custom |mobile tab picker scrolls",
+          "custom |draft tab visibility|shared tab dismissal|mobile tab picker scrolls|iPhone background notifications",
           "--workers=1",
           "--retries=0",
         ],

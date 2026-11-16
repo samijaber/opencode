@@ -23,6 +23,7 @@ test("shared preferences update mounted consumers without a reload or a write-ba
           notify: async () => {},
         },
       )
+
       localStorage.setItem("settings.v3", '{"tabLayout":"vertical"}')
       window.dispatchEvent(
         new StorageEvent("storage", {
@@ -64,11 +65,12 @@ test("persisted model selection hydrates, updates and serializes the schema shap
       )
 
       expect(state.session.session1?.agent).toBe("plan")
-      setState("session", "session1", { agent: "build", variant: null })
+      const choice = { providerID: "provider", modelID: "model", variant: { type: "default" as const } }
+      setState("session", "session1", { agent: "build", choice })
       expect(state.session.session1?.agent).toBe("build")
       flushPersisted()
       expect(JSON.parse(localStorage.getItem(key) ?? "null")).toEqual({
-        session: { session1: { agent: "build", variant: null } },
+        session: { session1: { agent: "build", choice } },
       })
     } finally {
       dispose()

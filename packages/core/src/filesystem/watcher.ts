@@ -56,7 +56,7 @@ export interface NativeInterface {
   ) => Effect.Effect<Subscription | undefined>
 }
 
-/** Uses fs.watch for immediate entries and Parcel for recursive directories. */
+/** Uses fs.watch for immediate entries and Windows directories; Parcel elsewhere. */
 export class Native extends Context.Service<Native, NativeInterface>()("@opencode/Watcher/Native") {}
 
 export interface Interface {
@@ -139,7 +139,11 @@ export const layer = (options?: Options) =>
             const subscription = yield* PubSub.subscribe(pubsub)
             if (yield* PubSub.isShutdown(pubsub)) return Stream.empty
             yield* onReady
-            return Stream.fromSubscription(subscription)
+            return Stream.fromSubscription(subscription).pipe(
+              Stream.takeUntil(
+                (update) => input.type === "directory" && update.path === target && update.type === "delete",
+              ),
+            )
           }),
         )
       })
@@ -230,6 +234,10 @@ export const nativeLayer = Layer.succeed(
           ),
         )
       }
+      // Parcel's Windows unsubscribe frees an OVERLAPPED while its completion is pending:
+      // https://github.com/parcel-bundler/watcher/issues/262. Config directories need
+      // invalidations, just like the file/entry watches above, not native event categories.
+      if (process.platform === "win32") return subscribeWindowsDirectory(input)
       return subscribeDirectory(watcher(), getBackend(), input.target, input.ignore, input.publish)
     },
   }),
@@ -242,6 +250,46 @@ export function configured(options?: Options) {
 }
 
 export const node = configured()
+
+function subscribeWindowsDirectory(input: Parameters<NativeInterface["subscribe"]>[0]) {
+  return Effect.gen(function* () {
+    const { Glob } = yield* Effect.promise(() => import("@opencode/util/glob"))
+    const ignored = input.ignore.map((pattern) => ({ pattern, path: path.resolve(input.target, pattern) }))
+    return yield* Effect.try({
+      try: () => {
+        const subscription = watch(input.target, { recursive: true }, (_event, file) => {
+          // Bun 1.4.4/libuv reports a deleted Windows watch root as an absolute
+          // filename repeatedly. Stop it immediately: otherwise those events
+          // keep Config's debounce pending forever (oven-sh/bun#39827).
+          if (file && path.isAbsolute(file)) {
+            subscription.close()
+            input.publish({ path: input.target, type: "delete" })
+            return
+          }
+          const target = file ? path.join(input.target, file) : input.target
+          const relative = path.relative(input.target, target).split(path.sep).join("/")
+          if (ignored.some((entry) => FSUtil.contains(entry.path, target) || Glob.match(entry.pattern, relative)))
+            return
+          input.publish({ path: target, type: "update" })
+        })
+        return subscription
+      },
+      catch: (error) => error,
+    }).pipe(
+      Effect.map((subscription) => {
+        subscription.on("error", (error: unknown) =>
+          Effect.runFork(Effect.logError("watcher callback failed", { path: input.target, error })),
+        )
+        return { unsubscribe: () => Promise.resolve(subscription.close()), backend: "node" }
+      }),
+      Effect.catch((error) =>
+        isRecord(error) && error.code === "ENOENT"
+          ? Effect.undefined
+          : Effect.logError("failed to watch directory", { path: input.target, error }).pipe(Effect.as(undefined)),
+      ),
+    )
+  })
+}
 
 function subscribeDirectory(
   native: typeof ParcelWatcher | undefined,

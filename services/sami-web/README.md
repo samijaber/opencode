@@ -1,10 +1,10 @@
 # Sami's OpenCode web build
 
-The custom build follows upstream `dev` (2.2.5, `7ce35879b8569263f14b37cff6d84394e635b00f`, checked October 31, 2026). Prefer upstream behavior over maintaining duplicate implementations.
+This source integrates upstream `dev` through `141be750b26961079370bfed7fa2c3ee7f9fc8be` (November 15, 2026). Source integration is not evidence that the live backend or desktop was upgraded. Prefer upstream behavior over maintaining duplicate implementations.
 
 Upstream now owns project discovery, live subagent/shell activity and message timestamp presentation. The old custom **Session activity** sheet is retired rather than layered over upstream's activity controls. Its separate completed-command history is not identical to upstream and is no longer provided as a second sheet.
 
-The retained additions are full historical recents in the vertical sidebar/mobile drawer, native touch scrolling without drag-to-reorder interception, and merged-branch indicators. Recent sessions include conversations without open tabs and use the upstream Home query cache. Upstream's experimental Inbox mode is unchanged. Desktop tab reordering is unchanged.
+The retained additions are full historical recents in the default vertical sidebar/mobile drawer, native touch scrolling without drag-to-reorder interception, and merged-branch indicators. `session-history.tsx` includes conversations without open tabs and uses the upstream Home query cache. It is independent of upstream's experimental Recent, organized and customized sidebars; those modes and Inbox remain available. Desktop tab reordering is unchanged.
 
 All work that was uncommitted before this update is retained in `02ad6950ee`. The merged source includes its conversation-recency and shared-read-marker fixes; the mobile changes are adapted to the new upstream tab components. A frontend-only deployment does not install the custom backend or change the installed desktop app.
 
@@ -77,7 +77,7 @@ The local Dagu job definition in `maintenance/opencode-upstream.yaml` checks `an
 
 `maintenance/upstream-sync.ts` is the versioned runner. Its installed, bundled copy and separate bare Git repository live under `~/.local/share/opencode/upstream-sync`; the scheduler never switches or edits an active development checkout. The installed runner is deliberately not replaced by fetched upstream code. Update it explicitly after changing its policy.
 
-The job fetches both tips, makes a detached checkout, and requires a frozen install, full repository lint/typecheck, real backend push-delivery/persistence tests, the custom Worker's complete test suite (including shared preferences on Chromium/WebKit), the four `custom ` tab keeper cases against a production build (including native touch swipes), the custom production frontend build, and a backend executable build. These focused browser gates do not claim the entire upstream e2e suite passes; the broader known baseline failures below remain separate. Bun 1.4.4 is pinned in the runner; review and update the runner when upstream changes its required runtime.
+The job fetches both tips, makes a detached checkout, and requires a frozen install, the browsers from the installed package's pinned Playwright CLI, full repository lint/typecheck, real backend push-delivery/persistence tests, the custom Worker's complete test suite (including shared preferences on Chromium/WebKit), production-build tab keepers (history, badges, native swipes, draft visibility and shared dismissal), iPhone push settings keepers, the custom production frontend build, and a backend executable build. These focused browser gates do not claim the entire upstream e2e suite passes; the broader known baseline failures below remain separate. Bun 1.4.4 is pinned in the runner; review and update the runner when upstream changes its required runtime.
 
 Only a passing merge is committed and pushed, using a normal fast-forward push after rechecking the custom branch tip. There is no force-push, rebase, blanket conflict preference, automatic code editing, frontend deployment, or server/app restart. Semantic conflicts require human/agent reconciliation; the script never guesses which custom behavior to discard. Deployment remains a separate compatibility-reviewed step through the owner route.
 

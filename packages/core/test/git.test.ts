@@ -369,80 +369,88 @@ describe("Git trees", () => {
 })
 
 describe("Git objects", () => {
-  it.live(
-    "packs loose objects and combines packs without losing or delegating any object",
-    () =>
-      Effect.gen(function* () {
-        const root = yield* tmpdirScoped()
-        const project = path.join(root.path, "project")
-        yield* Effect.promise(async () => {
-          await fs.mkdir(project)
-          await initRepo(project)
-          await Bun.write(path.join(project, "seed.txt"), "seed\n")
-          await $`git add . && git commit -q -m initial`.cwd(project).quiet()
-        })
-        const git = yield* Git.Service
-        const source = yield* git.repo.discover(AbsolutePath.make(project))
-        if (!source) throw new Error("Repository not found")
-        const repository = yield* git.repo.create({
-          worktree: source.worktree,
-          gitDirectory: AbsolutePath.make(path.join(root.path, "storage")),
-          seed: source,
-        })
-        const capture = () => git.tree.capture({ repository, scopes: [RelativePath.make(".")], ignores: source })
-        const trees = [yield* capture()]
-        // Enough distinct content to cross the loose-object threshold.
-        yield* Effect.promise(() =>
-          Promise.all(
-            Array.from({ length: 2100 }, (_, index) =>
-              Bun.write(path.join(project, `gen/d${index % 20}/f${index}.txt`), `${index}\n`),
-            ),
+  it.live("packs loose objects and combines packs without losing or delegating any object", () =>
+    Effect.gen(function* () {
+      const root = yield* tmpdirScoped()
+      const project = path.join(root.path, "project")
+      yield* Effect.promise(async () => {
+        await fs.mkdir(project)
+        await initRepo(project)
+        await Bun.write(path.join(project, "seed.txt"), "seed\n")
+        await $`git add . && git commit -q -m initial`.cwd(project).quiet()
+      })
+      const git = yield* Git.Service
+      const source = yield* git.repo.discover(AbsolutePath.make(project))
+      if (!source) throw new Error("Repository not found")
+      const repository = yield* git.repo.create({
+        worktree: source.worktree,
+        gitDirectory: AbsolutePath.make(path.join(root.path, "storage")),
+        seed: source,
+      })
+      const capture = () => git.tree.capture({ repository, scopes: [RelativePath.make(".")], ignores: source })
+      const trees = [yield* capture()]
+      // Cross the same packing branches without thousands of Windows file/index operations.
+      const options = { looseObjectLimit: 8, packCountLimit: 3 }
+      yield* Effect.promise(() =>
+        Promise.all(
+          Array.from({ length: 12 }, (_, index) =>
+            Bun.write(path.join(project, `gen/d${index % 3}/f${index}.txt`), `${index}\n`),
           ),
-        )
+        ),
+      )
+      trees.push(yield* capture())
+      const objects = path.join(repository.gitDirectory, "objects")
+      const alternates = path.join(objects, "info", "alternates")
+      // Objects stored in the snapshot repository itself, excluding anything borrowed through alternates.
+      const everything = () =>
+        Effect.promise(async () => {
+          const borrowed = await fs.readFile(alternates, "utf8")
+          await fs.rm(alternates)
+          const listed =
+            await $`git --git-dir ${repository.gitDirectory} cat-file --batch-all-objects ${"--batch-check=%(objectname)"}`.text()
+          await fs.writeFile(alternates, borrowed)
+          return listed.split("\n").filter(Boolean).toSorted()
+        })
+      const loose = () => Effect.promise(() => looseObjectIDs(objects))
+      const before = yield* everything()
+      const unpacked = yield* loose()
+      expect(unpacked.length).toBeGreaterThan(options.looseObjectLimit)
+
+      // The default policy must still leave this small repository unpacked.
+      yield* git.objects.pack(repository)
+      expect(yield* loose()).toEqual(unpacked)
+      yield* git.objects.pack(repository, options)
+      expect(yield* loose()).toEqual([])
+      expect(yield* everything()).toEqual(before)
+
+      for (let batch = 0; batch < options.packCountLimit; batch++) {
+        yield* Effect.promise(() => Bun.write(path.join(project, `batch-${batch}.txt`), `${batch}\n`))
         trees.push(yield* capture())
-        const objects = path.join(repository.gitDirectory, "objects")
-        const alternates = path.join(objects, "info", "alternates")
-        // Objects stored in the snapshot repository itself, excluding anything borrowed through alternates.
-        const everything = () =>
-          Effect.promise(async () => {
-            const borrowed = await fs.readFile(alternates, "utf8")
-            await fs.rm(alternates)
-            const listed =
-              await $`git --git-dir ${repository.gitDirectory} cat-file --batch-all-objects ${"--batch-check=%(objectname)"}`.text()
-            await fs.writeFile(alternates, borrowed)
-            return listed.split("\n").filter(Boolean).toSorted()
-          })
-        const loose = () => Effect.promise(() => looseObjectIDs(objects))
-        const before = yield* everything()
-        expect((yield* loose()).length).toBeGreaterThan(2048)
+        yield* Effect.promise(async () => {
+          const list = await looseObjectIDs(objects)
+          await $`git --git-dir ${repository.gitDirectory} pack-objects -q ${path.join(objects, "pack", "pack")} < ${Buffer.from(list.join("\n") + "\n")}`.quiet()
+          await $`git --git-dir ${repository.gitDirectory} prune-packed`.quiet()
+        })
+      }
+      const packs = () =>
+        Effect.promise(async () =>
+          (await fs.readdir(path.join(objects, "pack"))).filter((file) => file.endsWith(".pack")),
+        )
+      const separate = yield* packs()
+      expect(separate.length).toBeGreaterThanOrEqual(options.packCountLimit)
+      const merged = yield* everything()
 
-        yield* git.objects.pack(repository)
-        expect(yield* loose()).toEqual([])
-        expect(yield* everything()).toEqual(before)
+      // Nor should the default sixteen-pack policy combine these packs.
+      yield* git.objects.pack(repository)
+      expect(yield* packs()).toEqual(separate)
+      yield* git.objects.pack(repository, options)
+      expect((yield* packs()).length).toBe(1)
+      expect(yield* everything()).toEqual(merged)
 
-        for (let batch = 0; batch < 16; batch++) {
-          yield* Effect.promise(() => Bun.write(path.join(project, `batch-${batch}.txt`), `${batch}\n`))
-          trees.push(yield* capture())
-          yield* Effect.promise(async () => {
-            const list = await looseObjectIDs(objects)
-            await $`git --git-dir ${repository.gitDirectory} pack-objects -q ${path.join(objects, "pack", "pack")} < ${Buffer.from(list.join("\n") + "\n")}`.quiet()
-            await $`git --git-dir ${repository.gitDirectory} prune-packed`.quiet()
-          })
-        }
-        const packs = () =>
-          Effect.promise(async () =>
-            (await fs.readdir(path.join(objects, "pack"))).filter((file) => file.endsWith(".pack")),
-          )
-        expect((yield* packs()).length).toBeGreaterThanOrEqual(16)
-        const merged = yield* everything()
-
-        yield* git.objects.pack(repository)
-        expect((yield* packs()).length).toBe(1)
-        expect(yield* everything()).toEqual(merged)
-
-        expect((yield* git.tree.files({ repository, from: trees[0]!, to: trees.at(-1)! })).length).toBe(2100 + 16)
-      }),
-    { timeout: 60_000 },
+      expect((yield* git.tree.files({ repository, from: trees[0]!, to: trees.at(-1)! })).length).toBe(
+        12 + options.packCountLimit,
+      )
+    }),
   )
 })
 
