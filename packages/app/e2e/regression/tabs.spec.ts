@@ -317,15 +317,27 @@ test.describe("custom mobile scrolling", () => {
     const x = bounds.x + bounds.width / 2
     const y = bounds.y + bounds.height / 2
 
-    // The completed touch gesture has no momentum to consume the next tap.
-    // Windows Chromium can scroll these injected touches without emitting scrollend.
-    await devtools.send("Input.synthesizeScrollGesture", {
-      x,
-      y,
-      yDistance: -140,
-      gestureSourceType: "touch",
-      preventFling: true,
+    // Explicit input timestamps describe a slow swipe, ending at rest. This avoids
+    // OS-dependent fling/scrollend behavior without waiting on wall-clock delays.
+    const timestamp = Date.now() / 1000
+    await devtools.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [{ x, y }],
+      timestamp,
     })
+
+    for (let step = 1; step <= 10; step++)
+      await devtools.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [{ x, y: y - step * 14 }],
+        timestamp: timestamp + step * 0.05,
+      })
+    await devtools.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x, y: y - 140 }],
+      timestamp: timestamp + 1,
+    })
+    await devtools.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [], timestamp: timestamp + 1.05 })
     await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBeGreaterThan(20)
     await expect(titles).toHaveText(sessions.map((item) => item.title))
     await expectPath(page, sessionHref(sessions[0].id))

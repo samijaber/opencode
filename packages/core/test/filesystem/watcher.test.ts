@@ -183,6 +183,48 @@ describe("Watcher lifecycle", () => {
     ),
   )
 
+  it.live("recursive watches keep literal and glob ignores while repeatedly acquiring and releasing", () =>
+    Effect.acquireDisposable(Effect.promise(() => tmpdir())).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const native = yield* Watcher.Native
+          const events: Watcher.Update[] = []
+          const target = path.join(tmp.path, "kept.txt")
+          yield* Effect.promise(() => fs.mkdir(path.join(tmp.path, "ignored")))
+          yield* Effect.forEach(
+            Array.from({ length: 32 }, (_, index) => index),
+            (index) =>
+              Effect.gen(function* () {
+                const before = events.length
+                yield* Effect.acquireRelease(
+                  native.subscribe({
+                    type: "directory",
+                    target: tmp.path,
+                    ignore: ["ignored", "**/*.tmp"],
+                    publish: (update) => events.push(update),
+                  }),
+                  (subscription) => Effect.promise(() => subscription?.unsubscribe() ?? Promise.resolve()),
+                )
+                yield* Effect.promise(async () => {
+                  await fs.writeFile(path.join(tmp.path, "ignored", "skip.txt"), String(index))
+                  await fs.writeFile(path.join(tmp.path, "skip.tmp"), String(index))
+                  await fs.writeFile(target, String(index))
+                })
+                yield* Effect.sync(() => events.slice(before).some((event) => event.path === target)).pipe(
+                  Effect.filterOrFail(Boolean),
+                  Effect.retry(Schedule.spaced("10 millis")),
+                  Effect.timeout("10 seconds"),
+                )
+              }).pipe(Effect.scoped),
+          )
+          expect(events.filter((event) => event.path === target).length).toBeGreaterThanOrEqual(32)
+          // FSEvents may also report the watched root's creation from its initial scan.
+          expect(events.filter((event) => event.path !== target && event.path !== tmp.path)).toEqual([])
+        }).pipe(Effect.provide(Watcher.nativeLayer)),
+      ),
+    ),
+  )
+
   it.effect("interrupting a consumer interrupts a pending acquisition", () =>
     Effect.gen(function* () {
       const started = yield* Deferred.make<void>()
