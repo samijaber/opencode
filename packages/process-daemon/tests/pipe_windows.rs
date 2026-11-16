@@ -127,17 +127,14 @@ fn start(
 struct Finished {
     output: String,
     exit: ProcessExit,
-    elapsed: Duration,
 }
 
 /// Waits for the exit and reads the output file.
 fn run(service: &TerminalService, id: TerminalId, file: &TempPath) -> Finished {
-    let started = Instant::now();
     let exit = service.wait(id).unwrap().recv().unwrap();
     Finished {
         output: String::from_utf8_lossy(&fs::read(&file.0).unwrap()).into_owned(),
         exit,
-        elapsed: started.elapsed(),
     }
 }
 
@@ -575,6 +572,7 @@ fn terminate_does_not_hang_on_a_grandchild() {
 fn a_noisy_grandchild_still_exits_after_the_drain() {
     let service = TerminalService::default();
     let marker = TempPath::new("noisy-marker");
+    let release = TempPath::new("noisy-release");
     let inner = Script::powershell(
         "noisy-grandchild",
         &format!(
@@ -582,7 +580,7 @@ fn a_noisy_grandchild_still_exits_after_the_drain() {
             # Prove the pipe is live before the parent exits.
             [Console]::Out.Write('x')
             [Console]::Out.Flush()
-            [System.IO.File]::WriteAllText('{}', 'started')
+            [System.IO.File]::WriteAllText('{}', "$PID")
             while ($true) {{
                 [Console]::Out.Write('x')
             }}
@@ -590,8 +588,8 @@ fn a_noisy_grandchild_still_exits_after_the_drain() {
             ps_path(&marker.0)
         ),
     );
-    // A batch parent: it waits for the marker, so the grandchild is already
-    // writing when the parent exits and the drain deadline is exercised.
+    // Hold the parent until the test observes the writing grandchild. PowerShell
+    // startup on native ARM must not consume the separate ten-second drain budget.
     let outer = batch(
         "noisy-outer",
         &[
@@ -601,22 +599,34 @@ fn a_noisy_grandchild_still_exits_after_the_drain() {
                 inner.0.0.display()
             ),
             ":wait".to_string(),
-            format!("if exist \"{}\" goto done", marker.0.display()),
+            format!("if exist \"{}\" goto done", release.0.display()),
             "ping -n 2 127.0.0.1 >nul".to_string(),
             "goto wait".to_string(),
             ":done".to_string(),
             "exit /b 0".to_string(),
         ],
     );
-    let (info, file) = start(&service, |file| cmd(&outer.0.display().to_string(), file));
-    let finished = run(&service, info.id, &file);
-    assert_eq!(finished.exit.exit_code, Some(0));
-    assert!(
-        finished.elapsed < Duration::from_secs(10),
-        "{:?}",
-        finished.elapsed
-    );
+    let (info, _file) = start(&service, |file| cmd(&outer.0.display().to_string(), file));
+    let ready = Instant::now() + Duration::from_secs(30);
+    while !marker.0.exists() {
+        assert!(
+            Instant::now() < ready,
+            "PowerShell grandchild did not start"
+        );
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    let grandchild = read_pid(&marker.0);
+    assert!(alive(grandchild));
+    let wait = service.wait(info.id).unwrap();
+    assert!(wait.exit.try_recv().is_err());
+    fs::write(&release.0, "exit").unwrap();
+    let exit = wait
+        .exit
+        .recv_timeout(Duration::from_secs(10))
+        .expect("pipe drain exceeded ten seconds after releasing the parent");
+    assert_eq!(exit.exit_code, Some(0));
     service.terminate(info.id).unwrap();
+    wait_dead(grandchild);
 }
 
 #[test]

@@ -3,9 +3,9 @@ import { chromium, expect, webkit } from "@playwright/test"
 import worker from "../src/index"
 
 // Owns the cross-origin contract: the old build never imports or propagates these preferences.
-test.each([chromium, webkit])(
+test.each([chromium, webkit].map((engine) => [engine.name(), engine] as const))(
   "%s shares canonical preferences without sharing drafts or credentials",
-  async (engine) => {
+  async (_name, engine) => {
     const client = await Bun.build({
       entrypoints: ["../../packages/app/src/runtime/persistence/shared.ts"],
       target: "browser",
@@ -58,6 +58,8 @@ test.each([chromium, webkit])(
         })
       })
       const source = await context.newPage()
+      // Clock installation is context-wide and must precede document timers.
+      await source.clock.install()
       await source.goto(canonical + "/seed")
       await source.evaluate(
         ({ settings, tabs, canonical }) => {
@@ -128,17 +130,20 @@ test.each([chromium, webkit])(
 
       // Expired Access/offline must not block Hub or discard edits made before the next handshake.
       await context.route(canonical + "/_opencode/preferences", (route) => route.abort())
-      await target.clock.install()
-      await target.reload()
-      await target.clock.runFor(2500)
+      // WebKit can hold load behind the module's pending bridge timeout. Let the
+      // document commit, then observe initialization before advancing its clock.
+      await target.reload({ waitUntil: "commit" })
+      await expect(target.locator(`iframe[src="${canonical}/_opencode/preferences"]`)).toBeAttached()
+      await target.clock.fastForward(2500)
       await expect.poll(() => target.locator("#root").textContent()).toBe("ready")
       await target.evaluate(async () => {
         const { notifyStorageWrite } = await import("/storage-events.js")
         localStorage.setItem("settings.v3", '{"appearance":{"tabLayout":"vertical","fontSize":20}}')
         notifyStorageWrite("settings.v3", localStorage.getItem("settings.v3"))
       })
-      await target.reload()
-      await target.clock.runFor(2500)
+      await target.reload({ waitUntil: "commit" })
+      await expect(target.locator(`iframe[src="${canonical}/_opencode/preferences"]`)).toBeAttached()
+      await target.clock.fastForward(2500)
       await expect.poll(() => target.locator("#root").textContent()).toBe("ready")
       await context.unroute(canonical + "/_opencode/preferences")
       await target.reload()
