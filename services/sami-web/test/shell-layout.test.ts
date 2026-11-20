@@ -66,7 +66,7 @@ test("Hub dock, desktop rail and titlebars keep a compact application viewport w
         dockPadding: "0px",
       })
       expect(await page.locator("#hub-navigation a").allTextContents()).toEqual([
-        "OpenCode",
+        "HAPI",
         "Orchestrator",
         "Flow",
         "Previews",

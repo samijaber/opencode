@@ -25,7 +25,7 @@ export default {
       response.headers.set("x-opencode-ui-revision", env.BUILD_SHA)
       return response
     }
-    // Keep one network-only worker for all three Hub apps, adding background push without SPA caching.
+    // Keep one network-only worker for Hub, adding background push without SPA caching.
     if (hub && url.pathname === "/sw.js" && ["GET", "HEAD"].includes(request.method)) {
       return new Response(
         request.method === "HEAD"
@@ -58,9 +58,16 @@ self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));`
     // and response without buffering: SSE, uploads, cookies and WebSocket upgrades keep their semantics.
     if (
       (hub &&
-        (["/flow", "/verification", "/previews", "/orchestrator", "/orchestrator/", "/opencode", "/opencode/"].includes(
-          url.pathname,
-        ) ||
+        ([
+          "/",
+          "/flow",
+          "/verification",
+          "/previews",
+          "/orchestrator",
+          "/orchestrator/",
+          "/opencode",
+          "/opencode/",
+        ].includes(url.pathname) ||
           ["/flow/", "/verification/", "/previews/", "/hub/"].some((prefix) => url.pathname.startsWith(prefix)))) ||
       url.pathname === "/api" ||
       url.pathname.startsWith("/api/") ||
@@ -73,7 +80,8 @@ self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));`
       if (
         hub &&
         request.method === "GET" &&
-        (url.pathname === "/flow/" ||
+        (url.pathname === "/" ||
+          url.pathname === "/flow/" ||
           /^\/verification(?:\/(?!api(?:\/|$)|assets(?:\/|$)|login(?:\/|$)|auth(?:\/|$)).*)?$/.test(url.pathname)) &&
         response.status === 200 &&
         response.headers.get("content-type")?.includes("text/html") &&
@@ -82,7 +90,7 @@ self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));`
         const branded = new Response(response.body, response)
         branded.headers.delete("etag")
         branded.headers.delete("content-length")
-        branded.headers.set("cache-control", "no-cache")
+        if (url.pathname !== "/") branded.headers.set("cache-control", "no-cache")
         branded.headers.set("x-opencode-ui-revision", env.BUILD_SHA)
         return hubBranding().transform(branded)
       }

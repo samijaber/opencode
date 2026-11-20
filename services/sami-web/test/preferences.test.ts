@@ -89,7 +89,7 @@ test.each([chromium, webkit].map((engine) => [engine.name(), engine] as const))(
         },
         { tabs, hub },
       )
-      await target.goto(hub)
+      await target.goto(hub + "/server/synthetic/session/ses_synthetic")
       await expect.poll(() => target.locator("#root").textContent()).toBe("ready")
       expect(await target.evaluate(() => localStorage.getItem("settings.v3"))).toBe(settings)
       expect(await target.evaluate(() => localStorage.getItem("opencode-theme-id"))).toBe("nightowl")
