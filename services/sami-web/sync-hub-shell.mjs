@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url"
 // Read the installed service, not a possibly older Iradah development checkout.
 const source = process.env.HUB_SHELL_SOURCE ?? (await installedSource())
 const { hubHtml } = await import(pathToFileURL(source).href)
-const html = hubHtml("<html><head></head><body><!--opencode--></body></html>", "/")
+const html = hubHtml("<html><head></head><body><!--opencode--></body></html>", "/server/synthetic")
 const head = html.match(/<head>([\s\S]*?)<\/head>/)?.[1].replace(/<link\b[^>]*>/g, "")
 const body = html.match(/<body[^>]*>([\s\S]*?)<!--opencode-->/)?.[1]
 const footer = html.match(/<!--opencode-->([\s\S]*?)<\/body>/)?.[1]
