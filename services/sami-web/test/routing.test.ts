@@ -54,6 +54,8 @@ test("both hosts serve the same custom bundle; only Hub adds navigation and keep
 })
 
 test.each([
+  "/",
+  "/?source=homescreen",
   "/flow",
   "/flow/",
   "/flow/preview/example/index.html",
@@ -116,14 +118,21 @@ test("Hub serves the selected launcher assets and manifest without contacting th
   expect(origin).not.toHaveBeenCalled()
 })
 
-test.each(["/flow/", "/verification/", "/verification/dags/synthetic"])(
+test.each(["/", "/flow/", "/verification/", "/verification/dags/synthetic"])(
   "Hub %s shares the new branding without replacing its origin shell",
   async (path) => {
     const fixture = assets()
     spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         '<html><head><link rel="icon" href="/old.ico"><link rel="apple-touch-icon" href="/old.png"><link rel="manifest" href="/old.webmanifest"></head><body><nav id="hub-navigation">Existing navigation</nav><main>Origin application</main></body></html>',
-        { headers: { "content-type": "text/html", etag: '"origin"', "content-length": "100" } },
+        {
+          headers: {
+            "content-type": "text/html",
+            etag: '"origin"',
+            "content-length": "100",
+            "cache-control": "no-store",
+          },
+        },
       ),
     )
     const response = await worker.fetch(new Request(`https://hub.samijaber.com${path}`), fixture.env)
@@ -135,6 +144,7 @@ test.each(["/flow/", "/verification/", "/verification/dags/synthetic"])(
     expect(html).toContain("Origin application")
     expect(response.headers.get("etag")).toBeNull()
     expect(response.headers.get("content-length")).toBeNull()
+    if (path === "/") expect(response.headers.get("cache-control")).toBe("no-store")
     expect(fixture.fetch).not.toHaveBeenCalled()
   },
 )
